@@ -1,0 +1,855 @@
+---
+title: "KVGH5 Coursework"
+output: html_notebook
+bibliography: Assessment1.bib
+---
+
+# 1 Introduction
+
+Assessment 1 – Coursework – Session Two
+
+# 2 Data
+
+```{r}
+library(tidyverse)
+london_data <- read_csv("LondonData.csv")
+```
+
+# 3.1 Exploratory data analysis
+
+## Exploring data
+
+Check if there are any NA data
+
+```{r}
+sum(is.na(london_data)==T)
+```
+
+```{r}
+london_data %>% 
+  mutate( Borough = factor(Borough),
+          Inner = factor(Inner),
+          Area = factor(Area),
+          Political = factor(Political))
+
+```
+
+Comparing correlations between variables
+
+```{r}
+#install.packages("GGally")
+library(GGally)
+
+london_data %>% 
+  select( Pop_Density, Aged_65Plus, OnePerson_HH, Born_UK, Owned, Unemployed, Obesity, Female_LE) %>%
+  ggpairs()
+```
+
+## Analysis 1: Born_UK vs Pop_Density (Group by Inner & Outer London)
+
+**Plot**:
+
+```{r}
+london_data %>% 
+  ggplot(mapping = aes(y=Born_UK, x=Pop_Density, color = Inner)) +
+  geom_point() +
+  geom_smooth(method="lm")
+
+```
+
+#### Numerical Calculation:
+
+```{r}
+correlation <- london_data%>%
+  group_by(Inner)%>%
+  summarise(correlation= cor(Born_UK,Pop_Density,use="complete.obs"))
+print(correlation)
+```
+
+#### Discussion:
+
+Difference in population density:
+
+-   The scatter plot shows that the population density of Outer London is lower than that of Inner London as the blue dots seem to cluster on the lower end.
+-   This is expected as Inner London is more urbanized as compared to Outer London, hence more likely to offer more job opportunities, better educational systems and more efficient public transport services, attracting a diverse population.
+
+Relationship between population density and born in UK (group by Inner or Outer London)
+
+-   There seem to be a negative correlation between population density and the number of people born in UK for both Inner and Outer London. This means that as the population density increase, the proportion of residents born in UK decreases surprisingly.
+-   Moreover the strength of the relationship is stronger in Outer London with a stronger negative correlation coefficient value of -0.524 as compared to Inner London of -0.277. This means that the decrease in the number of UK born residents is more in Outer London as the population increases.
+-   This can be further prove by the gradient of the two regression line on the scatter plot. The steeper blue line for Outer London shows that the proportion of residents born in UK decreases at a faster rate with increasing population density as compared to Inner London.
+-   A potential reason could be that Outer London tend to attract more international migrants due to a lower cost of living and housing which thus contributes to a stronger decrease in the proportion of residents born in UK with increasing population density
+
+## Analysis 2: Obesity in different Areas
+
+#### Numerical calculation:
+
+```{r}
+mean_all_areas <- mean(london_data$Obesity)
+mean_all_areas
+```
+
+```{r}
+summary_stats<- london_data %>%
+  group_by(Area) %>%
+  summarise(
+    mean_obesity = mean(Obesity),
+  ) %>%
+  arrange(desc(mean_obesity)) 
+
+summary_stats
+```
+
+#### Plot:
+
+```{r}
+library(tidyverse)
+london_data%>%
+  ggplot(aes(x = Area, y = Obesity)) +
+    geom_boxplot() +
+    geom_hline(yintercept = mean(london_data$Obesity), linetype = "dashed", color = "blue") 
+```
+
+#### Discussion:
+
+1.  East:
+
+    -   The east area has the highest mean obesity rate at 24.0.
+
+    -   There is a notably high obesity rate with more than 75% higher than the mean obesity of all areas (dashed blue line)
+
+    -   However, the interquartile range (IQR) is narrow as compared to other areas, suggesting a lower variability within this area.
+
+    -   There is one lower outlier around 13 which indicates that most of data points are clustered in the higher values above 22.
+
+    -   Report has shown that East London borough has the highest number of children living in poverty out of the whole of UK. This lead to lower financial ability to afford healthier food options, contributing to higher obesity rates. [@eastLondon]
+
+2.  Central:
+
+    -   The central area has the lowest mean obesity rate at 18.1.
+
+    -   Around 75% of the population have a lower obesity rate than the mean obesity of all all areas.
+
+    -   The IQR seems the widest, indicating a great spread of obesity rates.
+
+    -   There is one exceptionally high outlier around 34 suggesting that while the median is low at around 17.5, there are cases with extremely high obesity rates.
+
+    -   Central London has residents with higher socio-economic status, leading to better access to educational and health resources, resulting in lower obesity rates.
+
+3.  Others
+
+    -   There are no significant outliers in these areas and the spread is pretty wide suggesting that the data points are more consistent and a considerable variability in obesity rates.
+
+```{r}
+result_aov <- aov(Obesity ~ Area, data=london_data)
+summary(result_aov)
+```
+
+-   The p-value is the probability of observing the difference under the null hypothesis that there is no difference in mean obesity between all the areas.
+
+-   This is against the alternative hypothesis that at least one group has statistically significant different in mean obesity.
+
+```{r}
+TukeyHSD(result_aov)
+```
+
+-   In this case we can see that there is no statistically significant difference between the mean obesity for West-Central, West-East and West-South. (p-value \> 0.05)
+
+## Analysis 3: Aged_65Plus in Inner London vs Outer London
+
+#### Numerical calculation:
+
+```{r}
+stats <- london_data %>%
+  group_by(Inner) %>%
+  summarise(mean= mean(Aged_65Plus),
+            sd= sd(Aged_65Plus))
+          
+stats
+
+```
+
+-   There seem to be higher proportion of residents aged 65 and older in Outer London as the mean is 13.2 which is higher than that of Inner London (8.85)
+
+-   The higher standard deviation in Outer London (4.30) as compared to in Inner London (2.64) shows a greater variability in the proportion of residents aged 65 and older.
+
+### Plot
+
+```{r}
+library(tidyverse)
+
+london_data%>%
+  ggplot(aes(Aged_65Plus))+
+  geom_density(color= "red", size=1)  +
+  geom_histogram(aes(y = ..density..)) +
+  facet_grid(cols=vars(Inner))
+
+
+```
+
+Inner London:
+
+-   The distribution is skewed to the right with most a noticeable density peak at 8% which indicates that most of the areas have 8% of their population aged 65 and older.
+
+-   The long tail on the right implies that there are a few areas with considerably higher proportion of elderly.
+
+Outer London:
+
+-   The distribution seems to be more symmetric with a broader peak ranging from 10-15% which implies a wider range of proportion of elderly aged 65 and older.
+
+-   The density plot for Outer London also shows a broader distribution than that in Inner London, indicating higher presence of elderly in many areas of Outer London.
+
+### Discussion
+
+-   This could be due to the higher cost of living in Inner London. As Outer London generally offers more affordable housing, elderly aged 65 and older might choose a more economical viable area to stay in after retirement.
+
+-   Moreover, Inner London may be more urbanized, hence elderly who wish to have quieter areas will choose to stay in Outer London which has more access to more leisure environments.
+
+# 3.2 Regression
+
+## Data Cleaning
+
+### Checking for outliers:
+
+```{r}
+#install.packages("gridExtra")
+library(gridExtra)
+Obesity <- london_data %>% 
+  ggplot(mapping=aes(y=Median_HP, x= Obesity)) +
+  geom_point()+
+  geom_smooth()
+
+Unemployed<- london_data %>% 
+  ggplot(mapping=aes(y=Median_HP, x= Unemployed)) +
+  geom_point()+
+  geom_smooth()
+
+Female<- london_data %>% 
+  ggplot(mapping=aes(y=Median_HP, x= Female_LE)) +
+  geom_point()+
+  geom_smooth()
+
+OnePerson<-london_data %>% 
+  ggplot(mapping=aes(y=Median_HP, x= OnePerson_HH)) +
+  geom_point()+
+  geom_smooth()
+
+
+Owned<- london_data %>% 
+  ggplot(mapping=aes(y=Median_HP, x= Owned)) +
+  geom_point()+
+  geom_smooth()
+
+Aged<- london_data %>% 
+  ggplot(mapping=aes(y=Median_HP, x= Aged_65Plus)) +
+  geom_point()+
+  geom_smooth()
+
+Born<- london_data %>% 
+  ggplot(mapping=aes(y=Median_HP, x= Born_UK)) +
+  geom_point()+
+  geom_smooth()
+
+Pop<- london_data %>% 
+  ggplot(mapping=aes(y=Median_HP, x= Pop_Density)) +
+  geom_point()+
+  geom_smooth()
+
+grid.arrange(Obesity, Unemployed, Female, Aged, Born, Owned, Pop, OnePerson)
+```
+
+-   From all the scatter plots against Median_HP there seem to be a point where is unusually high at around 3million which is significantly higher than the rest. Hence, we will remove this potential outlier to avoid the influence of an extreme case as it may be from an expensive area, thus ensuring a more reliable statistical analysis.
+
+```{r}
+threshold <- 2000000
+london_data_cleaned <- london_data[london_data$Median_HP <= threshold, ]
+```
+
+### Removing single data point:
+
+```{r}
+head(london_data$Borough,30)
+```
+
+-   By analysing the data, we found out that under the column of Borough, there is only one row of "City of London".
+
+-   Analyzing one data point from City of London will not provide insight into variability within that borough.
+
+-   Hence, we remove it to have a better statistical analysis on areas where sufficient data is given to draw conclusions.
+
+```{r}
+london_data_cleaned <- london_data_cleaned%>%
+  filter(Borough != "City of London")
+glimpse(london_data_cleaned)
+```
+
+## Pairs plot
+
+```{r}
+library(GGally)
+ggpairs(select(london_data_cleaned,Median_HP,Pop_Density, Aged_65Plus, OnePerson_HH, Born_UK, Owned, Unemployed, Obesity, Female_LE ))
+```
+
+```{r}
+library(dplyr)
+
+data <-london_data_cleaned %>% 
+  select(Median_HP, Pop_Density, Aged_65Plus, OnePerson_HH, Born_UK, Owned, Unemployed, Obesity, Female_LE) 
+  
+matrix <- cor(data, use = "complete.obs")
+cor_decreasing <- data.frame(Variable = names(matrix["Median_HP",]), Correlation = cor_median_hp)
+cor_decreasing %>% 
+  filter(Variable != "Median_HP") %>% 
+  arrange(desc(abs(Correlation)))
+
+
+```
+
+-   Obesity seems to be the most related to Media_HP so we can build a linear model based on that.
+
+## Linear regression model:
+
+#### 1. Obesity:
+
+```{r}
+model1 <- lm(Median_HP ~ Obesity, data=london_data_cleaned )
+plot(Median_HP ~ Obesity, data=london_data_cleaned )
+abline(model1)
+```
+
+```{r}
+summary(model1)
+```
+
+```{r}
+london_data_cleaned %>% 
+  ggplot(mapping=aes(y=Median_HP, x= Obesity)) +
+  geom_point()+
+  geom_smooth()
+```
+
+-   There seem to be a non-linear relationship between Median_HP and Obesity. Hence, we can transform the variable to make it a more linear relationship.
+
+```{r}
+model2 <- lm(Median_HP ~ log(Obesity) , data=london_data_cleaned )
+plot(Median_HP ~ log(Obesity), data=london_data_cleaned)
+abline(model2)
+```
+
+```{r}
+#install.packages("texreg")
+library(texreg)
+screenreg(list(model1, model2))
+```
+
+-   In this case fitting Median_HP against log(Obesity) did improve the fit as the adjusted R\^2 value is increased which is expected due to a visual evidence that the relationship between the two follows a non-linear power law relationship.
+
+-   Hence we add the log transform values to the data set.
+
+```{r}
+london_data_cleaned <- london_data_cleaned%>%
+  mutate(log_Obesity = log(Obesity))
+```
+
+### 2. Unemployed
+
+Unemployed also seems to be closely related to Median_HP so we can do the same.
+
+```{r}
+model3 <- lm(Median_HP ~ Unemployed, data=london_data_cleaned )
+plot(Median_HP ~ Unemployed, data=london_data_cleaned )
+abline(model3)
+```
+
+```{r}
+summary(model3)
+```
+
+```{r}
+london_data_cleaned %>% 
+  ggplot(mapping=aes(y=Median_HP, x= Unemployed)) +
+  geom_point()+
+  geom_smooth()
+```
+
+```{r}
+model4 <- lm(Median_HP ~ log(Unemployed) , data=london_data_cleaned )
+plot(Median_HP ~ log(Unemployed), data=london_data_cleaned)
+abline(model4)
+```
+
+```{r}
+screenreg(list(model3, model4))
+```
+
+-   In this case fitting Median_HP against log(Unemployed) did improve the fit as well as the adjusted R\^2 value is increased.
+
+```{r}
+london_data_cleaned <- london_data_cleaned%>%
+  mutate(log_Unemployed = log(Unemployed))
+```
+
+## Multivariate Fitting Variables:
+
+-   Now we include multiple variables to see if our model performance improves.
+
+```{r}
+model5 <- lm(Median_HP ~ . -MSOA -Unemployed -Obesity, data=london_data_cleaned )
+summary(model5)
+
+```
+
+-   We see that adding in all variables makes a significant improvement to our model performance (adjusted R- squared value has increased to 0.758)
+
+## **Non-linear fit functions**
+
+We saw that the relationship between Female_LE and Median_HP could not be described by a straight line:
+
+3.  Female_LE
+
+```{r}
+london_data_cleaned %>% 
+  ggplot(mapping=aes(y=Median_HP, x= Female_LE)) +
+  geom_point()+
+  geom_smooth()
+```
+
+-   In this case, we might expect better predictions if we fit the relationship with a cubic curve, rather than a straight line for Median_HP against Female_LE.
+
+```{r}
+model_poly3_Female_LE <- lm(Median_HP ~ poly(Female_LE,3) , data=london_data_cleaned)
+summary(model_poly3_Female_LE)
+
+```
+
+-   In this case the 3rd order term is statistically significant as p-value for poly(Female_LE, 3) is less than 0.05, reflecting the fact that cubic curve better fits the relationship.
+
+Perform non-linear fit functions for OnePerson_HH and Born_UK which does not seem to have a linear function with Median_HP.
+
+4.  OnePerson_HH
+
+```{r}
+london_data_cleaned %>% 
+  ggplot(mapping=aes(y=Median_HP, x= OnePerson_HH)) +
+  geom_point()+
+  geom_smooth()
+```
+
+```{r}
+model_poly5_OnePerson_HH <- lm(Median_HP ~ poly(OnePerson_HH,5) , data=london_data_cleaned)
+summary(model_poly5_OnePerson_HH)
+
+```
+
+-   In this case up to the 5th order term is statistically significant as p-value for poly(OnePerson_HH, 3) is still less than 0.05.
+
+5.  Born_UK
+
+```{r}
+london_data_cleaned %>% 
+  ggplot(mapping=aes(y=Median_HP, x= Born_UK)) +
+  geom_point()+
+  geom_smooth()
+```
+
+```{r}
+model_poly3_Born_UK <- lm(Median_HP ~ poly(Born_UK,3) , data=london_data)
+summary(model_poly3_Born_UK)
+
+```
+
+-   The 3rd order term is statistically significant as p-value for poly(Born_UK, 3) is less than 0.05, reflecting the fact that cubic curve better fits the relationship.
+
+```{r}
+london_data_cleaned <- london_data_cleaned %>%
+  mutate(poly3_Female_LE = poly(Female_LE,3),
+         poly5_OnePerson_HH = poly(OnePerson_HH,5),
+         poly3_Born_UK = poly(Born_UK, 3))
+
+```
+
+## **Stepwise Model Selection**
+
+```{r}
+# install.package("MASS")
+library(tidyverse)
+library(MASS)
+select <- dplyr::select
+```
+
+```{r}
+model_min <- lm(Median_HP ~ 1, data=london_data_cleaned )
+model_max <- lm(Median_HP ~ .-MSOA -Female_LE -Born_UK - OnePerson_HH -Unemployed -Obesity, data=london_data_cleaned )
+scp <- list(lower = model_min, upper = model_max)
+
+```
+
+```{r}
+model_step <- stepAIC(model_min,
+                      direction = "both",
+                      scope = scp
+                      )
+
+```
+
+```{r}
+summary(model_step)
+```
+
+## Exhaustive Search for Variable Selection
+
+```{r}
+# install.packages("leaps")
+library(leaps)
+regsubsets_out <- regsubsets( Median_HP ~ . - MSOA -Borough -Female_LE -Born_UK - OnePerson_HH -Unemployed -Obesity,
+                             data = london_data_cleaned,
+                             nbest = 1,
+                             nvmax = NULL,
+                             force.in = NULL,
+                             force.out = NULL,
+                             method = 'exhaustive'
+                            )
+as.data.frame(summary(regsubsets_out)$outmat)
+
+```
+
+```{r}
+plot(regsubsets_out)
+```
+
+```{r}
+lm_regsubset <- lm(formula = Median_HP ~ Inner + Area + Political + Aged_65Plus + Owned + log(Unemployed) + log(Obesity) + poly3_Female_LE+ poly5_OnePerson_HH + poly3_Born_UK , data = london_data_cleaned)
+summary(lm_regsubset)
+```
+
+## **Applying a multiple regression**
+
+-   In this context, the number of houses owned by the residents could depend on the Borough in this area. Hence we find the interaction between them.
+
+```{r}
+london_data_cleaned %>%
+  ggplot(mapping = aes(y=Median_HP, x=Owned, color=Borough)) +
+  geom_point()+
+  geom_smooth(method=lm)
+```
+
+```{r}
+multiple <- lm(Median_HP ~ log_Obesity + Borough + log_Unemployed + 
+    poly3_Female_LE + Pop_Density + poly5_OnePerson_HH + Aged_65Plus + 
+    Owned + poly3_Born_UK + Owned*Borough, data = london_data_cleaned)
+summary(mutiple)
+
+```
+
+## **Spline models**
+
+-   As overfitting may occur during polynomial regression which often require high degree polynomials to maintain the complexity of the relationship between variables, by using spline models can better fit the data with a lower degree of freedom and reduce overfitting.
+
+-   Hence, we will use splines on OnePerson_HH which has a polynomial degree of 5 previously.
+
+```{r}
+set.seed(2)
+
+n <- nrow(london_data_cleaned)
+
+df_vals <- 6:25
+
+n_vals <- length(df_vals)
+
+results <- data.frame(df = rep(0,n_vals),
+                      rmse_training = rep(0,n_vals),
+                      rmse = rep(0,n_vals),
+                      se = rep(0,n_vals))
+
+for (i in 1:n_vals){
+  
+  df_i <- df_vals[i]
+  
+  fit_spline <- lm(Median_HP~bs(OnePerson_HH,df=df_i),data=london_data_cleaned)
+  
+  cv_result <- cvFit(fit_spline, data = london_data_cleaned,y = london_data_cleaned$OnePerson_HH, K = 5, R = 20)
+  
+  results$df[i] <- df_i
+  results$rmse[i] <- cv_result$cv
+  results$se[i] <- cv_result$se
+  
+  Hp_pred <- predict(fit_spline)
+  rmse_train <- sqrt(sum((london_data_cleaned$Median_HP - Hp_pred)^2)/n)
+  results$rmse_training[i] <- rmse_train
+  
+}
+
+print(results)
+```
+
+```{r}
+best_rmse <- min(results$rmse)
+best_row <- which.min(results$rmse)
+best_df <- results$df[best_row]
+best_se <- results$se[best_row]
+
+ggplot(data=results) +
+  geom_point(mapping=aes(x=df, y=rmse)) +
+  geom_errorbar(mapping=aes(x=df, ymin=rmse-2*se, ymax=rmse+2*se)) +
+  geom_hline(yintercept = best_rmse, linetype="dashed") +
+  geom_hline(yintercept = best_rmse+2*best_se, linetype="dotted") +
+  geom_hline(yintercept = best_rmse-2*best_se, linetype="dotted")
+```
+
+To identify the best model, we consider the model with the lowest cross validation error. which is model with 7 degrees of freedom.
+
+The error bars for the model with 7 degrees of freedom indicate that its performance is not statistically distinguishable from the models with all the other degrees of freedom.
+
+Hence we use the least complicated model which is the model with 6 degree of freedom as it is the least complicated model and has error which is indistinguishable from the model with the every lowest error.
+
+```{r}
+spline <- lm(Median_HP ~ log_Obesity + Borough + log_Unemployed + 
+    poly(Female_LE,3) + Pop_Density + bs(OnePerson_HH, df=6, degree=5) + Aged_65Plus + Owned + poly(Born_UK, 3) + Owned*Borough, data = london_data_cleaned)
+summary(spline)
+```
+
+## Comparing Models
+
+### Quantitative Metrics
+
+1.  Adjusted R-squared
+
+```{r}
+summary(lm_regsubset)$adj.r.squared
+summary(model_step)$adj.r.squared
+summary(mutiple)$adj.r.squared
+summary(spline)$adj.r.squared
+```
+
+2.  AIC
+
+```{r}
+AIC(lm_regsubset)
+AIC(model_step)
+AIC(mutiple)
+AIC(spline)
+```
+
+3.  Cross Validation
+
+```{r warning=FALSE, message=FALSE}
+library(cvTools)
+
+set.seed(1)
+cv_1 <- cvFit(lm_regsubset,data=london_data_cleaned,y=london_data_cleaned$Median_HP,K=5,R=20)
+print(c(cv_1$cv,cv_1$se))
+
+cv_2 <- cvFit(model_step,data=london_data_cleaned,y=london_data_cleaned$Median_HP,K=5,R=20)
+print(c(cv_2$cv,cv_2$se))
+
+set.seed(1)
+cv_3 <- cvFit(mutiple,data=london_data_cleaned,y=london_data_cleaned$Median_HP,K=5,R=20)
+print(c(cv_3$cv,cv_3$se))
+
+cv_4 <- cvFit(spline,data=london_data_cleaned,y=london_data_cleaned$Median_HP,K=5,R=20)
+print(c(cv_4$cv,cv_4$se))
+```
+
+According to the adjusted R-squared, AIC and cross validation, the spline model is more superior as the adjusted R-squared value is the highest whereas the AIC and cross validation values are the lowest.
+
+## Regularization:
+
+As our data set have many predictors, we implement Lasso to reduce the complexity of the model by setting some of the coefficients to zero which helps in preventing overfitting.
+
+### The lasso
+
+```{r}
+library(glmnet)
+library(tidyverse)
+```
+
+```{r}
+london_data_regularization <- london_data%>% 
+  mutate(log_Obesity = log(Obesity),
+         log_Unemployed = log(Unemployed))
+```
+
+```{r}
+Median_HP_x <- select(london_data_regularization, -c(Median_HP, Unemployed, Obesity))
+Median_HP_y <- london_data_regularization$Median_HP
+
+fit_lasso <- glmnet(x=data.matrix(Median_HP_x),
+                    y=Median_HP_y,
+                    alpha = 1)
+plot(fit_lasso, xvar="lambda")
+```
+
+As logarithm of lambda increases, coefficient values are "shrunk" towards zero.
+
+```{r}
+set.seed(1)
+results_lasso <- cv.glmnet(x=data.matrix(Median_HP_x),
+                           y=Median_HP_y,
+                           alpha=1,
+                           nfolds=10)
+plot(results_lasso)
+```
+
+The smallest average error obtained by cross validation occurred fwith around 12 non-zero coefficients.The model represented with around four non-zero coefficients is the simplest reccommended model whose error is statistically indistinguishable from the model with the very smallest error.
+
+```{r}
+opt_fit_lasso <- glmnet(x=data.matrix(Median_HP_x),
+                        y=Median_HP_y,
+                        alpha = 1,
+                        lambda = results_lasso$lambda.1se)
+coef(opt_fit_lasso)
+```
+
+```{r}
+library(cvTools)
+cv_opt_lasso <- cvFit(opt_fit_lasso,
+                      data = data.matrix(Median_HP_x),
+                      y = Median_HP_y,
+                      k=5,
+                      R=30 )
+cv_opt_lasso$cv
+cv_opt_lasso$se
+```
+
+-   The cross validation results seem to be higher than that of the spline model. Hence the spline model is still more superior and the better model.
+
+### **Ridge regression**
+
+-   Ridge regression prevents complex models from fitting the data points too closely
+
+```{r}
+fit_ridge <- glmnet(x=data.matrix(Median_HP_x),
+                    y=Median_HP_y,
+                    alpha = 0)
+min_coef <- min(coef(fit_ridge))
+ylim_range <- c(min_coef, 0)
+plot(fit_ridge, xvar = "lambda", ylim = ylim_range)
+```
+
+-   As logarithm of lambda increases, coefficient values are "shrunk" towards zero. However, unlike the case in the lasso, they are not driven all of the way to zero.
+
+```{r}
+set.seed(1)
+results_ridge <- cv.glmnet(x=data.matrix(Median_HP_x),
+                           y=Median_HP_y,
+                           alpha=0,
+                           nfolds=10)
+plot(results_ridge)
+```
+
+```{r}
+opt_fit_ridge <- glmnet(x=data.matrix(Median_HP_x),
+                        y=Median_HP_y,
+                        alpha = 0,
+                        lambda = results_ridge$lambda.1se)
+coef(opt_fit_ridge)
+```
+
+```{r}
+cv_opt_ridge <- cvFit(opt_fit_ridge,
+                      data = data.matrix(Median_HP_x),
+                      y = Median_HP_y,
+                      k=5,
+                      R=30 )
+cv_opt_ridge$cv
+cv_opt_ridge$se
+```
+
+-   The cross validation results seem to be higher than that of the spline model. Hence the spline model still appear to be the best model.
+
+## Best Model interpretation
+
+1.  The spline model has a R-squared value of 0.797 which accounts for 79.7% variance in Median_HP which suggest a strong fit.
+2.  Predictors:
+    -   logarithms of obesity and unemployment: this 2 factors are strongly related to Median_HP where they negatively impact the property values
+
+    -   the cubic polynomial terms for both female life expectancy and resident born in UK shows an impact on house prices changes in a non linear way
+
+    -   Spline for one person households is of 6 degree of freedom, it reduce complexity and ensure non-linear effects to house prices
+
+    -   The interaction between borough and owned properties suggests that the effect of property ownership on house prices varies across different boroughs.
+3.  Model Accuracy
+    -   RSE
+
+```{r}
+r <- sqrt(sum(residuals(lm_regsubset)^2) / df.residual(lm_regsubset))
+cat("Residual Standard Error (RSE) for lm_regsubset model:", rse, "\n")
+r
+
+rse2 <- sqrt(sum(residuals(model_step)^2) / df.residual(model_step))
+cat("Residual Standard Error (RSE) for mode_step model:", rse, "\n")
+rse2
+
+rse1 <- sqrt(sum(residuals(mutiple)^2) / df.residual(mutiple))
+cat("Residual Standard Error (RSE) for mutiple model:", rse, "\n")
+rse1
+
+rse <- sqrt(sum(residuals(spline)^2) / df.residual(spline))
+cat("Residual Standard Error (RSE) for spline model:", rse, "\n")
+rse
+```
+
+-   The RSE for the spline model is the lowest, suggesting that the model's prediction is the closest to the actual model, thus a better fit.
+
+    -   CV Error
+
+```{r warning=FALSE, message=FALSE}
+library(cvTools)
+
+set.seed(1)
+cv_1 <- cvFit(lm_regsubset,data=london_data_cleaned,y=london_data_cleaned$Median_HP,K=5,R=20)
+cat("Cross-validation results for lm_regsubset:\n")
+print(c(cv_1$cv,cv_1$se))
+
+cv_2 <- cvFit(model_step,data=london_data_cleaned,y=london_data_cleaned$Median_HP,K=5,R=20)
+cat("Cross-validation results for model_step:\n")
+print(c(cv_2$cv,cv_2$se))
+
+set.seed(1)
+cv_3 <- cvFit(mutiple,data=london_data_cleaned,y=london_data_cleaned$Median_HP,K=5,R=20)
+cat("Cross-validation results for mutiple:\n")
+print(c(cv_3$cv,cv_3$se))
+
+cv_4 <- cvFit(spline,data=london_data_cleaned,y=london_data_cleaned$Median_HP,K=5,R=20)
+cat("Cross-validation results for spline:\n")
+print(c(cv_4$cv,cv_4$se))
+```
+
+-   By comparing the CV error, the spline model has the lowest CV error hence most accurate as it generalizes well to unseen data.
+    -   RMSE
+
+```{r}
+
+lm_regsubset_predictions <- predict(lm_regsubset, newdata=london_data_cleaned)
+lm_regsubset_residuals <- london_data_cleaned$Median_HP - lm_regsubset_predictions
+lm_regsubset_mse <- mean(lm_regsubset_residuals^2)
+lm_regsubset_rmse <- sqrt(lm_regsubset_mse)
+cat("Root Mean Squared Error (RMSE) for lm_regsubset model:\n")
+cat("RMSE:", lm_regsubset_rmse, "\n\n")
+
+model_step_predictions <- predict(model_step, newdata=london_data_cleaned)
+model_step_residuals <- london_data_cleaned$Median_HP - model_step_predictions
+model_step_mse <- mean(model_step_residuals^2)
+model_step_rmse <- sqrt(model_step_mse)
+cat("Root Mean Squared Error (RMSE) for model_step model:\n")
+cat("RMSE:", model_step_rmse, "\n\n")
+
+
+mutiple_predictions <- predict(mutiple, newdata=london_data_cleaned)
+mutiple_residuals <- london_data_cleaned$Median_HP - mutiple_predictions
+mutiple_mse <- mean(mutiple_residuals^2)
+mutiple_rmse <- sqrt(mutiple_mse)
+cat("Root Mean Squared Error (RMSE) for mutiple model:\n")
+cat("RMSE:", mutiple_rmse, "\n\n")
+
+
+spline_predictions <- predict(spline, newdata=london_data_cleaned)
+spline_residuals <- london_data_cleaned$Median_HP - spline_predictions
+spline_mse <- mean(spline_residuals^2)
+spline_rmse <- sqrt(spline_mse)
+cat("Root Mean Squared Error (RMSE) for spline model:\n")
+cat("RMSE:", spline_rmse, "\n")
+
+```
+
+-   The RMSE for spline model is the lowest which suggest that it has the smallest average prediction error compared to other models, hence the model is more fitted to the data ensuring a more accurate prediction.

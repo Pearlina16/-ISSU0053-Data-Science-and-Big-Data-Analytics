@@ -1,0 +1,991 @@
+---
+title: "Exam"
+subtitle: "ISSU0053: Data Science and Big Data Analytics, Practice"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+---
+
+This exam makes up 50% of the mark for this course.
+
+Scheduling:
+
+* Date: N/A
+* Start time: N/A
+* Duration: 2.5 hours
+
+Examination conditions:
+
+* This exam is to be completed under open-book conditions.
+You may consult your notes, teaching material, relevant online resources, etc.
+* You are welcome to make use of R libraries which we have taught as part of the course.
+If you do make use of R libraries then the code to load those libraries must be included somewhere within your question answers.
+* All work submitted must be your own.
+All forms of communication and messaging during the exam are strictly prohibited, and violations will be dealt with in accordance with UCL policy.
+* You may work on the UCL computers, or on your own laptop.
+If you choose to work on your own laptop then you take responsibility for any technical issues.
+* At the end of the exam you will have a short time to collate the files you have produced and upload them for marking.
+
+Notes
+
+* Partial marks may be awarded for code sections which have been completed, but which are non-functional.
+* When answering questions, you should include units where relevant and quote values to an appropriate number of significant figures.
+Plots should be displayed with appropriate axes and labels.
+* Marks for questions are indicative, and may be transformed to generate a final grade.
+
+```{r}
+library(cvTools)
+library(tidyverse)
+```
+
+
+# Section A
+
+An analysis of crab body dimensions.
+
+Male fiddler crabs have one large claw (used to attract females) and one small claw.
+These are classified as the major and minor claws, respectively.
+Major claws can be either on the right or the left.
+
+The data in the file ```crab.csv``` contains the following measurements taken from male crabs sampled from a large colony.
+
+* ```crab.id``` an ID number for the measurement.
+* ```body.size``` the size of the crab's body in cm.
+* ```major.claw``` the size of the crab's major claw in cm.
+* ```minor.claw``` the size of the crab's minor claw in cm.
+* ```claw.ratio``` the ration of the claw sizes (major/minor).
+* ```major.side``` which side the major claw is on (left or right).
+
+We wish to explore the data, and in particular to be able to determine an expected body size given the values of other measurements.
+
+## Question 1
+
+### Part i
+
+State your student number.
+
+
+0 marks
+
+### Part ii
+
+Is this an example of constructing a model for inference or for prediction?
+
+1 mark
+
+prediction
+
+
+### Part iii
+
+Write R code to read the ```crabs.csv``` file into your environment.
+
+1 mark
+
+```{r}
+read.csv("crabs.csv")
+```
+
+If you are unable to complete this, you can instead load the data directly using the command below.
+
+```{r}
+load("crabs.Rda")
+```
+
+
+### Part iv
+
+How many rows are in the dataset?
+
+1 mark
+
+```{r}
+crabs <- read.csv("crabs.csv")
+nrow(crabs)
+```
+291
+### Part v
+
+What is the mean body size of the crabs sampled?
+
+1 mark
+
+```{r}
+mean(crabs$body.size)
+```
+
+### Part vi
+
+What is the median size of the major claws recorded?
+
+1 mark
+
+```{r}
+median(crabs$major.claw)
+```
+
+### Part vii
+
+What percentage of the crabs in the dataset had their major claw on the right hand side?
+
+1 mark
+
+```{r}
+count <- crabs$major.side == "Right"
+sum(count)/nrow(crabs) * 100
+```
+
+## Question 2
+
+### Part i
+
+Produce a scatter plot showing body size against major claw size.  
+Ensure that the axes are labelled as "body size (cm)" and "major claw size (cm)", and that the plot has the title "Body measurements of crabs".
+
+4 marks
+
+```{r}
+plot(crabs$body.size, crabs$major.claw, main = "Body measurements of crabs")
+```
+
+### Part ii
+
+Construct a linear regression model for the outcome body size, using major claw size as the covariate.
+
+1 mark
+
+```{r}
+linear = lm(body.size ~ major.claw, data=crabs)
+plot(body.size~major.claw, data=crabs)
+abline(linear)
+```
+
+### Part iii
+
+Discuss how we can interpret the value for the fitted coefficient for major claw size.
+
+1 mark
+
+```{r}
+summary(linear)
+```
+
+It is the gradient of the slope
+body.size = 3.07 + 0.5 * major.claw
+An increase in major.claw size by one unit increases the body size by half.
+
+### Part iv
+
+Use the results of the fitted model to predict the mean body size of crabs which have a major claw size equal to 10cm.
+
+1 mark
+
+```{r}
+library(tidyverse)
+new <- crabs %>%
+  filter(major.claw >= 10 & major.claw<= 11)
+
+predict = predict(linear, new)
+predict
+```
+
+
+
+## Question 3
+
+Crabs are able to regrow a lost claw.
+It is proposed that this may lead to outliers, as claws in the process of regrowing will not be at their final size.
+
+### Part i
+
+On the scatter plot you created in Question 2 Part ii there is one point (with claw size approximately 7cm) that appears to be an outlier to the fit.
+
+Identify the row index for this outlier, and use this to find its exact body size and claw size.
+
+
+2 marks
+
+```{r}
+crabs %>%
+  filter(major.claw<=8 & body.size>=8)
+```
+
+* Row index: 25
+* Body size: 8.1
+* Claw size: 6.62
+
+### Part ii
+
+Is the position of this outlier consistent with the hypothesis that this crab is in the process of regrowing a lost claw?
+Explain your answer.
+
+2 marks
+```{r}
+crabs %>%
+  filter(body.size>=7 & body.size<=8)
+```
+
+Yes, as crabs of similar body sizes have higher claw size, hence it may be that the particular crab is regrowing its claw hence a lower claw size.
+
+### Part iii
+
+Use R to remove the data row associated with this outlier from the data set.
+
+1 mark
+
+```{r}
+crabs <- crabs%>%
+  filter(crab.id!= 25)
+crabs
+```
+
+## Question 4
+
+### Part i
+
+Calculate the coefficient of Pearson's correlation, $r$, between the measurements of major and minor claw sizes.
+
+1 mark
+
+```{r}
+correlation <- cor(crabs$major.claw, crabs$minor.claw, method = 'pearson')
+ correlation
+
+```
+
+### Part ii
+
+Explain why including both of these variables as covariates in a linear regression model to predict body size could be problematic.
+
+1 mark
+As they are strongly related, it means that it is difficult to change one variable without changing another making it difficult to estimate the relationship between each independent variable.
+
+
+### Part iii
+
+It is proposed instead to use claw ratio in the model, to avoid such problems.
+Build a linear regression model for the outcome body size using the two variables major claw size and claw ratio as covariates.
+
+1 mark
+
+```{r}
+model <- lm(body.size~ major.claw+ claw.ratio, data=crabs)
+plot(body.size~major.claw + claw.ratio, data=crabs)
+abline(model)
+```
+
+### Part iv
+
+Examine the fit of the resulting model.
+Look at the reported $F$-statistic value.
+What does this reported $F$-statistic relate to?
+
+1 mark
+
+```{r}
+summary(model)
+
+```
+The high F-stat value indicates that it is effective in explaining the variance in the body size.
+
+
+### Part v
+
+In this case, what does result arising from the $F$-statistic tell us?
+Explain your answer.
+
+1 mark
+large F-stat
+
+larger F-statistic indicates a greater disparity between the variances, suggesting that the model explains a significant portion of the variability in the data.
+If the F-statistic is significantly large, it suggests that the null hypothesis can be rejected, indicating that the groups means are not all equal or the model coefficients are not all zero.
+
+### Part vi
+
+Construct a linear regression model which adds major side as a third predictor.
+
+1 mark
+
+```{r}
+
+model1 <- lm(body.size~ major.claw+ claw.ratio + major.side, data=crabs)
+
+```
+
+### Part vii
+
+Is there evidence that including this predictor improves the model?
+Explain your answer.
+
+2 marks
+
+```{r}
+anova(model,model1)
+
+```
+- not stat significant bec p-value is >0.05. Hence by adding major.side does not improve the model. 
+- or compare R-square 
+
+
+## Question 5
+
+All parts of this question consider the explanation of body size using major claw size only.
+
+### Part i
+
+To estimate the range of R-squared values that might arise from fitting to different samples of the population, we will resample the data 100 times in a bootstrap analysis.
+For each resample we will fit the simple linear regression model and therefore we will end up with 100 measurements of the R-squared fit values.
+
+Note: The R-squared value can be extracted directly from the summary of the fitted model.
+For example, if the model is ```lm.1``` then ```rsq <- summary(lm.1)$r.squared``` stores only the R-squared value.
+
+Carry out this analysis, for example using a for loop to generate a bootstrapped dataset, fit the simple linear regression model of body size using the covariate major claw size, store the resulting value of R-squared, and repeat this looping until 100 bootstrap measurments have been obtained.
+
+4 marks
+
+```{r}
+library(boot)
+library(dplyr)
+
+rsquare <- rep(0,100)
+
+for(i in 1:100){
+  bootstrap_data <- sample_n(crabs, size = 20, replace = T)
+  lm.1 = lm(body.size~ major.claw, data=bootstrap_data)
+  rsquare[i] <- summary(lm.1)$r.squared
+}
+print(rsquare)
+```
+
+### Part ii
+
+Make a histogram of the resulting distribution of the R-squared values.
+Use appropriate axes labels.
+
+2 marks
+
+```{r}
+library(tidyverse)
+r2 = data.frame(r2 = rsquare)
+ggplot(data = r2, mapping = aes(x=rsquare),binwidth=1) +
+  geom_histogram() 
+
+```
+
+### Part iii
+
+It is proposed that a fit of log(body size) against log(major claw size) will better describe the data in comparison to using the non-transformed measurements.
+
+Create new columns in the data frame which store the log measurements of body size and major claw size.
+
+2 marks
+
+```{r}
+crabs <- crabs %>%
+  mutate(log_body.size = log(body.size),
+         log_major.claw = log(major.claw))
+
+```
+
+### Part iv
+
+Perform the linear regression using the log transformed measurements and examine the fit results.
+
+1 mark
+
+```{r}
+library(texreg)
+model3<-lm(log_body.size ~ log_major.claw, data=crabs )
+screenreg(list(model3, linear))
+
+```
+The log transformed model is better as it has a higher adjusted r-square value.
+
+### Part v
+
+Evaluate whether using log transformations makes the fit of the model for body size using major claw size significantly better, significantly worse, or is not significantly different compared to the original model.
+
+2 marks
+
+```{r}
+plot(model3)
+```
+```{r}
+plot(linear)
+```
+
+By comparing the residuals-fitted graph we can see that the deviation of the log-transform model is greater, suggesting a higher error, hence despite a better r-square value, it does not mean it will perform significantly better.
+
+# Section B
+
+This consists of an analysis of mortality (death rates) based upon demographic information from metropolitan areas in the USA.
+
+The file ```mortality.csv``` stores the following columns:
+
+* ```A1``` Average January rainfall in inches
+* ```A2``` Average January temperature in degrees Fahrenheit
+* ```A3``` Average July temperature in degrees Fahrenheit
+* ```A4``` Percent of population aged 65 or older
+* ```A5``` Average household size in 1960
+* ```A6``` Average level of schooling for persons over 22
+* ```A7``` Percentage of households with full kitchens
+* ```A8``` Population per square mile in urbanized areas
+* ```A9``` Percent non-white population
+* ```A10``` Percent office workers
+* ```A11``` Poor families (income under $3000)
+* ```A12``` Relative pollution level of hydrocarbons
+* ```A13``` Relative pollution level of Nitrogen Oxides
+* ```A14``` Relative pollution level of Sulphur Dioxide
+* ```A15``` Percent relative humidity
+* ```B``` Total annual age-adjusted mortality rate per 100 000 members of the population
+
+This data was collected as part of an investigation to determine how air pollution and other factors are related to death rates.
+
+## Question 6
+
+### Part i
+
+Write R code to load the data into your environment.
+
+1 mark
+
+```{r}
+mortality = read.csv("mortality.csv")
+```
+
+If you are unable to complete this, you can instead load the data directly using the command below.
+
+```{r}
+load("crabs.Rda")
+```
+
+### Part ii
+
+Examine the correlation between predictors and the response, identifying the predictors which have a strong positive (above +0.5) correlation with mortality rate.
+
+1 mark
+
+```{r}
+#install.packages("GGally")
+library(GGally)
+
+
+matrix <- cor(mortality, use = "complete.obs")
+which(matrix[,'B'] > 0.5)
+
+
+```
+A1 , A9
+
+
+### Part iii
+
+Examine the correlation between predictors and the response, identifying the predictors which have a strong negative (below -0.5) correlation with mortality rate.
+
+1 mark
+
+```{r}
+matrix <- cor(mortality, use = "complete.obs")
+which(matrix[,'B'] < -0.5)
+```
+
+
+
+### Part iv
+
+Fit a multiple linear regression model to predict the death rate, ```B```, using all possible predictors, ```A1``` to ```A15```.
+
+1 mark
+
+```{r}
+mutiple = lm(B~ . , data=mortality)
+```
+
+### Part v
+
+Fidn the predicted death rate in each area according to the fitted model and store the values into a new column.
+
+1 mark
+
+```{r}
+pred <- predict(mutiple)
+mortality %>%
+  mutate(pred)
+```
+
+### Part vi
+
+Make a plot showing actual death rate on the $y$-axis and predicted death rate on the $x$-axis.
+Add a line showing how a prefect prediction would perform.
+
+3 marks
+
+```{r}
+mortality%>%
+  ggplot(aes(x=pred, y=B))+
+  geom_point()+
+  geom_abline()
+```
+
+### Part vii
+
+Examine the diagnostic plots for the fitted model by calling the ```plot``` command on the model.
+Identify the data row which has been flagged as having a high leverage.
+
+1 mark
+
+```{r}
+plot(mutiple)
+```
+
+29
+
+### Part viii
+
+Find the data associated with the high leverage observation and suggest why this observation produces an outlier when used to predict the death rate.
+
+1 mark
+
+```{r}
+nrow(mortality)
+rownames(mortality) = c(1:60)
+mortality[29, ]
+```
+There is an extreme high pollution level as A12 - A15 are generally higher than other rows.
+
+
+## Question 7
+
+### Part i
+
+Construct a reduced linear regression model in which death rate, ```B```, is the outcome and covariates are ```A1```, ```A2```, ```A3```, ```A4```, ```A5```, ```A6```, ```A8```, ```A9```, ```A12```, ```A13```, ```A14``` and ```A15``` (that is, all except for ```A7```, ```A10``` and ```A11```).
+
+1 mark
+
+```{r}
+new = lm(B~ . -A7 -A10 -A11, data=mortality)
+```
+
+### Part ii
+
+Discuss and explain the differences between in the R-squared and the Adusted R-squared values for the reduced and full models.
+
+3 marks
+
+```{r}
+library(texreg)
+summary(new)$adj.r.squared
+summary(mutiple)$adj.r.squared
+```
+
+The reduced model have a higher adj-r-square hence better model. 
+
+### Part iii
+
+Calculate the model performance of this reduced model as measured by MSE and RMSE calculated using the training data.
+
+2 marks
+
+```{r}
+fitted = predict(mutiple)
+mse <- sum((fitted - mortality$B)^2)/nrow(mortality)
+mse
+rmse = sqrt(mse)
+rmse
+```
+
+* MSE:767
+* RMSE:27.7
+
+### Part iv
+
+Perform k-fold cross-validation with 10 folds to cross validate the model performance.
+
+3 marks
+
+```{r}
+cv1 <- cvFit(mutiple, data=mortality, y=mortality$B, k=10, R=10)
+cv1
+cv2 <- cvFit(new, data=mortality, y=mortality$B, k=10, R=10)
+cv2
+```
+
+### Part v
+
+Explain why such cross-validation is done, and discuss how and why the performance value found from k-fold validation may differ compared to the answer you found in Part iii.
+
+3 marks
+
+We can make the function run a number of repeats, each time splitting the data differently into k-folds. We can then look at the range of performance estimates from each repeat, to get an idea of the error in our performance estimate.
+If the K value is too large, then this will lead to less variance across the training set and limit the model currency difference across the iterations.
+```{r}
+cv1$se
+cv2$se
+```
+
+
+
+### Part vi
+
+Use the function ```regsubsets``` from the ```leaps``` package to test through all possible combinations and so find the subset of predictors found to optimise model performance.
+
+3 marks
+
+```{r}
+library(leaps)
+regsubsets_out <- regsubsets( B ~ .  ,
+                             data = mortality,
+                             nbest = 1,
+                             nvmax = NULL,
+                             force.in = NULL,
+                             force.out = NULL,
+                             method = 'exhaustive'
+                            )
+
+plot(regsubsets_out)
+
+
+```
+
+A1,2,6,8,9,14
+
+### Part vii
+
+Find the best performing of the selected subset models as measured by adjusted R-squared.
+Which predictors are not included in this model?
+
+1 mark
+
+```{r}
+plot(regsubsets_out, scale='adjr2', main='Adjusted Rsq')
+
+```
+
+A10, A11, A14, A15
+
+### Part viii
+
+Is the best performing model from such a search the best model possible we can construct?
+Explain your answer.
+
+2 marks
+
+No. we should compare different methods such as stepwise selection to preict the best model. 
+
+### Part ix
+
+Make a plot to show how adjusted R-squared varies against number of predictors for the best subsets identified.
+Label your plot axes appropriately.
+
+Hint: You can find the set of adjusted R-squared values by using the summary command on the output of the ```regsubsets``` command via ```summary(...)$adjr2```.
+
+3 marks
+
+```{r}
+plot(summary(regsubsets_out)$adjr)
+
+```
+
+# Section C
+
+An analysis aiming to classify two types of lily based upon characteristics of stem length, petal width and petal length.
+
+The file ```flowers.csv``` contains four columns:
+
+* ```petal.length``` Stores petal length in cm
+* ```petal.width``` Stores petal with in cm
+* ```stem.length``` Stores stem length in cm
+* ```type``` Stores flower type as an integer, with 0 for pink lily and 1 for yellow lily
+
+Our aim is to build a model which can classify the flower type using the predictor variables.
+
+## Question 8
+
+### Part i
+
+Write R code to read the ```flowers.csv``` file into your environment.
+
+1 mark
+
+```{r}
+flowers = read.csv("flowers.csv")
+```
+
+If you are unable to complete this, you can instead load the data directly using the command below.
+
+```{r}
+load("flowers.Rda")
+```
+
+### Part ii
+
+Add a new column, ```type.factor```, to the dataframe which stores the flower type as a factor variable with appropriate level labels.
+
+2 marks
+
+```{r}
+flowers = flowers %>%
+  mutate(type.factor = factor(type, levels=c(0,1), labels = c("pink lily", "white lily")))
+```
+
+### Part iii
+
+Make three figures which show boxplots to illustrate how the distribution of petal width, petal length and stem length differ for the two types of flowers.
+
+3 marks
+
+```{r}
+flowers %>%
+  ggplot(aes(y=petal.width, x=type.factor))+
+  geom_boxplot()
+
+flowers %>%
+  ggplot(aes(y=petal.length, x=type.factor))+
+  geom_boxplot()
+
+flowers %>%
+  ggplot(aes(y=stem.length, x=type.factor))+
+  geom_boxplot()
+```
+
+### Part iv
+
+Comment on which variable(s) seem most suited for discriminating between the two flower types.
+petal length as the varaince and median seem to be of great difference
+1 mark
+
+
+
+### Part v
+
+Perform a $t$-test to check if we can reject the null hypothesis that the populations of the yellow and pink lily distributions have the same mean stem length.
+
+Comment on your results.
+
+2 marks
+
+```{r}
+t.test(stem.length~type.factor, data=flowers)
+```
+since p>0.05 significant we reject H0 as there is sufficient evidence to prove that there is a diff between the mean length.
+
+
+### Part vi
+
+Make a scatter plot of petal length vs petal width, using different colours to distinguish the flower types.
+Label your axes appropriately.
+
+4 marks
+
+```{r}
+flowers%>%
+  ggplot(aes(x=petal.length, y=petal.width, color=type.factor))+
+  geom_point()
+```
+
+### Part vii
+
+Will it be possible to use these variables to classify the flower type without making errors?
+Explain your answer.
+
+2 marks
+
+No. there are a few points which are intersected which means that the same length and width appear for both flower types.
+
+## Question 9
+
+We now perform logistic regression to classify the flowers using petal width and petal length as our predictors.
+
+### Part i
+
+Divide the dataset into two dataframes of equal length to create training and test datasets.
+
+Ensure that the split is randomised as the data are ordered by flower type.
+
+2 marks
+
+```{r}
+set.seed(1)
+#You might choose to uncomment the line above, to ensure that your split is reproducible -- that every time you divide the data into training and test data you get the same observations in each group.
+indice = sample(1:nrow(flowers))
+mid = ceiling(nrow(flowers)/2)
+train = flowers[indice[1:mid],]
+test = flowers[indice[(mid+1):nrow(flowers)],]
+```
+
+### Part ii
+
+Perform a logistic regression on the training data to produce a fitted model which can classify the lily type based upon petal width and petal length.
+
+3 marks
+
+```{r}
+model_logred_length = glm(type~petal.length + petal.width,
+                          data=train,
+                          family=binomial)
+summary(model_logred_length)
+train$pred <- predict(model_logred_length,type="resp")
+train$pred_type <- if_else(train$pred < 0.5, 0, 1)
+```
+
+### Part iii
+
+Make a new column in the test dataframe which stores the flower type predicted by the fit.
+
+2 marks
+
+```{r}
+
+
+test$pred <- predict(model_logred_length,type="resp",newdata=test)
+test$pred_type <- if_else(test$pred < 0.5, 0, 1)
+
+test$newtype=train$pred_type
+```
+
+### Part iv
+
+Create the confusion matrix which shows the result of the classification, in terms of predicted and actual lily types, when applied to the test data.
+
+2 marks
+
+```{r}
+table(predicted=test$pred_type,actual=test$type)
+
+```
+
+### Part v
+
+Calculate the misclassification rate on the test data and on the training data.
+
+3 marks
+
+```{r}
+sum(test$pred_type!= test$type)/nrow(test) *100
+```
+
+### Part vi
+
+Why is measuring the misclassification rate on training data predictions in general not sufficient for testing the performance of our model?
+
+1 mark
+
+A model that overfits will have a low misclassification rate on the training data but a high misclassification rate on new, unseen data. Thus, using the training data to evaluate performance gives an overly optimistic view of the model’s true predictive ability.
+
+## Question 10
+
+We will now use the method of k-nearest neighbours (KNN) to classify the flowers.
+
+### Part i
+
+Create the following dataframes in preparation for performing KNN analysis:
+
+* A dataframe containing all training rows, and columns for petal width and petal length only
+* A dataframe containing all training rows, and a factor column of petal type only
+* A dataframe containing all test rows, and columns for petal width and petal length only
+
+3 marks
+
+```{r}
+X_train <- data.frame(petal.length = train$petal.length, petal.width= train$petal.width)
+Y_train <- data.frame(type = train$type)
+X_test <- data.frame(petal.length= test$petal.length,  petal.width= train$petal.width)
+```
+
+### Part ii
+
+Carry out KNN analysis using $K=10$ and store the resulting test data predictions.
+
+3 marks
+
+```{r}
+library(class)
+Y_train = Y_train$type
+Y_test_predicted <- knn(X_train, X_test, Y_train, k=10)
+test$type_predicted <- Y_test_predicted
+
+```
+
+### Part iii
+
+Calculate the misclassification rate of the resulting test data predictions.
+
+2 marks
+
+```{r}
+n_incorrect <- sum(test$type != test$type_predicted)
+n_correct <- sum(test$type == test$type_predicted)
+n_total <- n_correct + n_incorrect
+accuracy <- n_incorrect / n_total
+accuracy
+
+
+```
+
+### Part iv
+
+Write a loop to repeat the analysis for values of $K$ from 1 to 50, calculating the test data misclassification rate at each step and store these results in a dataframe with columns ```K``` and ```MCR``` (mislassification rate).
+
+5 marks
+
+```{r}
+results <- data.frame(K = integer(), MCR = numeric())
+
+# Loop through values of K from 1 to 50
+for (k in 1:50) {
+  # Predict species using KNN
+  Y_pred <- knn(X_train, X_test, Y_train, k = k)
+  
+  # Calculate misclassification rate
+  misclassified <- sum(Y_pred != test$type)
+  mcr <- misclassified / length(test$type)
+  
+  # Store the result in the dataframe
+  results <- rbind(results, data.frame(K = k, MCR = mcr))
+}
+
+# Print the results
+print(results)
+```
+
+### Part v
+
+Make a plot of misclassification rate against $K$.
+Add a horizontal line indicating the best performance over all the values of $K$ you tried.
+Label your axes appropriately.
+
+3 marks
+
+```{r}
+ggplot(results, aes(x=K, y=MCR)) +
+  geom_point()
+```
+
+# Section A Continued
+
+This question revisits the crab dataset.
+
+## Question 11
+
+### Part i
+
+The file ```crabs.csv``` can be produced from the file ```raw.csv```, which stores only the fundamental crab measurements and presents them in increasing order of body size.
+
+Write code to import ```raw.csv``` and manipulate it until it contains the same observations as ```crabs.csv```, with the same columns, and is also ordered in increasing order of ID.
+
+5 marks
+
+```{r}
+raw_data <- read.csv("raw.csv")
+crabs_data <- raw_data %>%
+  mutate(
+    major.claw = pmax(left.claw, right.claw),
+    minor.claw = pmin(left.claw, right.claw),
+    claw.ratio = major.claw / minor.claw,
+    major.side = ifelse(left.claw > right.claw, "Left", "Right")
+  ) %>%
+  select(crab.id, body.size, major.claw, minor.claw, claw.ratio, major.side) %>%
+  arrange(crab.id)
+print(crabs_data)
+```
