@@ -1,0 +1,304 @@
+---
+title: "Day 7 Introduction to Linear Models"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*.
+
+```{r}
+library(tidyverse)
+penguins = read_csv("/Users/pp16/Desktop/NTU/UCL exchange/week 1 day 5/penguins_knn.csv")
+pairs(select(penguins, bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g))
+
+```
+
+Flipper length seems to be most clearly related to body mass so we can build a linear model based on that.
+
+## Compare mass and flipper length
+
+```{r}
+mass_flipper = lm(body_mass_g~flipper_length_mm, data=penguins)
+plot(body_mass_g~flipper_length_mm, data=penguins)
+abline(mass_flipper)
+```
+
+-   if use mutiple data, read adjusted R-squared.
+
+-   If use one data, use mutiple R-squared
+
+```{r}
+summary(mass_flipper)
+```
+
+-   Resulting formula : `body_mass_g = -5780 + flipper_length_mm*49.686`
+
+-   Residual standard error can use to compare which model is better
+
+-   Std. Error can be use to calculate confidence intervals
+
+```{r}
+plot(mass_flipper)
+```
+
+-   For residuals vs fitted, ideal is 0
+
+-   QQ we want to see most of the points on the line
+
+-   if there is an outlier, on residuals vs leverage, there will be a point to show a stretch of the cook distance
+
+```{r}
+hist(mass_flipper$residuals)
+```
+
+## Compare body mass and bill length
+
+```{r}
+mass_bill = lm(body_mass_g ~ bill_length_mm, data = penguins)
+plot(body_mass_g ~ bill_length_mm, data=penguins)
+abline(mass_bill)
+```
+
+```{r}
+summary(mass_bill)
+```
+
+-   Resulting formula: body_mass_g = 362.307\
+    -   87.415\*bill_length_mm
+
+```{r}
+#install.packages("texreg")
+library(texreg)
+```
+
+```{r}
+screenreg( list(mass_flipper,mass_bill) )
+```
+
+```{r}
+model4 <- lm(body_mass_g ~ flipper_length_mm + bill_length_mm + bill_depth_mm + species
+, data=penguins )
+summary(model4)
+```
+
+```{r}
+model3 <- lm(body_mass_g ~ log(flipper_length_mm), data=penguins )
+plot(body_mass_g ~ log(flipper_length_mm), data=penguins)
+abline(model3)
+```
+
+```{r}
+body_mass_g= -4327.327 + 20.241* flipper_length_mm + 41.468*bill_length_mm +140.328*bill_depth_mm -513.247*speciesChinstrap+ 934.887*speciesGentoo
+```
+
+```{r}
+flipper_length_mm <- c(180, 210, 225)
+new_data <- data.frame(flipper_length_mm = flipper_length_mm)
+body_mass_predicted <- predict(mass_flipper, new_data)
+body_mass_predicted
+```
+
+## Exercise
+
+-   Load in the data file.
+
+```{r}
+estate = read_csv("/Users/pp16/Desktop/NTU/UCL exchange/week 2 day 7/real_estate.csv")
+```
+
+-   Check that the data types are set up appropriately.
+
+```{r}
+str(estate)
+```
+
+-   Check the amount of data in the dataset, and whether there is any missing data.
+
+```{r}
+nrow(estate)
+sum(is.na(estate))
+```
+
+-   Think: What relationships might you expect to find in this dataset?
+
+```{r}
+pairs(estate)
+```
+
+-   Explore the relationships between the variables and the price.
+
+```{r}
+estate %>% 
+  ggplot(mapping = aes(y=price_per_sqm, x=sale_date))+
+  geom_point()+
+  geom_smooth()
+
+
+```
+
+```{r}
+estate %>% 
+  ggplot(mapping = aes(y=price_per_sqm, x=house_age))+
+  geom_point()+
+  geom_smooth()
+
+model1 <- lm(price_per_sqm ~ house_age, data=estate )
+plot(price_per_sqm ~ house_age, data=estate)
+abline(model1)
+```
+
+```{r}
+estate %>% 
+  ggplot(mapping = aes(y=price_per_sqm, x=dist_to_transport))+
+  geom_point()+
+  geom_smooth()
+
+model2 <- lm(price_per_sqm ~ dist_to_transport, data=estate )
+plot(price_per_sqm ~ dist_to_transport, data=estate)
+abline(model2)
+```
+
+```{r}
+estate %>% 
+  ggplot(mapping = aes(y=price_per_sqm, x=num_stores))+
+  geom_point()+
+  geom_smooth()
+
+model3 <- lm(price_per_sqm ~ num_stores, data=estate )
+plot(price_per_sqm ~ num_stores, data=estate)
+abline(model1)
+```
+
+```{r}
+estate %>%
+  ggplot(mapping = aes(y=latitude, x= longitude, color=price_per_sqm))+
+  scale_color_gradientn(colors = terrain.colors(10))+
+  geom_point()
+```
+
+```{r}
+model4 = lm(price_per_sqm ~ sale_date + house_age + dist_to_transport + num_stores + longitude +latitude , data = estate)
+summary(model4)
+```
+
+-   Identify which factors seem to be most important in determining house price.
+
+Distance to transport seem the most important, followed by house-age
+
+-   Determine if there are any factors that do not seem important.
+
+Sale-date
+
+-   Investigate other relationships between the input variables.
+
+```{r}
+library(Gally)
+```
+
+-   Once you have explored the data, try to make plots that illustrate your key findings.
+
+can log distance to expand the values
+
+```{r}
+estate %>% 
+  ggplot(mapping = aes(y=price_per_sqm, x=log(dist_to_transport)))+
+  geom_point()+
+  geom_smooth()
+```
+
+```{r}
+#install.packages("GGally")
+library(GGally)
+
+estate%>% 
+  select(dist_to_transport, num_stores, house_age, sale_date) %>%
+  ggpairs()
+```
+
+Add in log distance to transport
+
+```{r}
+estate = estate %>%
+  mutate(log_distance = log10(dist_to_transport))
+```
+
+Build our models
+
+```{r}
+model2 = lm(price_per_sqm~ log_distance, data=estate)
+plot(price_per_sqm~ log_distance, data=estate)
+abline(model2)
+```
+
+```{r}
+library(texreg)
+screenreg( list(model1,model2,model3) )
+
+```
+
+```{r}
+anova(model2,model3)
+```
+
+## Stepwise Model Selection
+
+-   builds up our model step-by-step
+
+-   StepAIC function from MASS
+
+```{r}
+#install.packages("MASS")
+library(MASS)
+library(tidyverse)
+select <- dplyr::select
+```
+
+```{r}
+model_min = lm(price_per_sqm ~1, data=estate)
+model_max = lm(price_per_sqm ~ . -dist_to_transport, data=estate) 
+#dot include everything
+#-dist add everything except dist to transport
+scp= list(lower=model_min, upper=model_max)
+
+```
+
+```{r}
+model_step <- stepAIC(model_min,
+                      direction = "forward",
+                      scope = scp,
+                      steps = 1)
+#one step at a time
+#lower AIC better
+```
+
+```{r}
+mode_stepback = stepAIC(model_max, 
+                     direction = "backward",
+                     score=scp)
+```
+
+## Exhaustive Search for Variable Selection
+
+```{r}
+#install.packages("leaps")
+library(leaps)
+
+regsubsets_out <- regsubsets( price_per_sqm ~ . - dist_to_transport,
+                             data = estate,
+                             nbest = 1,
+                             nvmax = NULL,
+                             force.in = NULL,
+                             force.out = NULL,
+                             method = 'exhaustive'
+                            )
+summary(regsubsets_out)
+```
+
+```{r}
+as.data.frame(summary(regsubsets_out)$outmat)
+```
+
+```{r}
+plot(regsubsets_out, scale='adjr2', main='Adjusted Rsq')
+```

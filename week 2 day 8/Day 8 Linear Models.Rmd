@@ -1,0 +1,283 @@
+---
+title: "Day 8 Linear Models"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*.
+
+```{r}
+library(tidyverse)
+```
+
+-   Read data, convert categorical variables to factors with descriptive labels, and remove the ‘female’ column.
+
+```{r}
+highschool = read_csv("/Users/pp16/Desktop/NTU/UCL exchange/week 1 day 3/hsb2.csv")
+
+highschool = highschool %>%
+  mutate(gender = factor(female, levels=c(0,1), labels=c("male","female")),
+         race = factor(race, levels=c(1,2,3,4), labels=c("hispanic", "asian", "african-american", "white")),
+         ses = factor(ses,levels=c(1,2,3), labels=c("low","middle","high")),
+         schtyp = factor(schtyp, levels=c(1,2), labels=c("public","private")),
+         prog=factor(prog,levels=c(1,2,3),labels=c("general","academic","vocational"))) %>%
+  select(-female)
+
+  
+  
+```
+
+```{r}
+highschool %>%
+  ggplot(mapping=aes(y=math, x=race, color=gender)) +
+  geom_boxplot()
+```
+
+```{r}
+highschool %>%
+  ggplot(mapping=aes(y=math, x=schtyp)) +
+  geom_boxplot()
+```
+
+```{r}
+highschool %>%
+  ggplot(mapping=aes(y=math, x=prog)) +
+  geom_boxplot()
+```
+
+```{r}
+highschool %>%
+  ggplot(mapping=aes(y=math, x=ses)) +
+  geom_boxplot()
+```
+
+```{r}
+highschool %>%
+  ggplot(mapping = aes(x= science,y=math)) + 
+  geom_point() +
+  geom_smooth()
+```
+
+```{r}
+highschool %>%
+  ggplot(mapping=aes(y=math, x=read)) +
+  geom_point() +
+  geom_smooth()
+```
+
+```{r}
+highschool %>%
+  ggplot(mapping=aes(y=math, x=write)) +
+  geom_point() +
+  geom_smooth()
+```
+
+```{r}
+highschool %>%
+  ggplot(mapping=aes(y=math, x=socst)) +
+  geom_point() +
+  geom_smooth()
+```
+
+```{r}
+library(GGally)
+highschool %>%
+  select(math,read,write,science,socst) %>%
+  ggpairs()
+
+highschool %>%
+  select(math,race,ses,schtyp,prog,gender) %>%
+  ggpairs()
+```
+
+```{r}
+lm_read = lm(math ~ read, data=highschool)
+data = summary(lm_read)
+```
+
+```{r}
+B0 = data$coefficients[1]
+B1 = data$coefficients[2]
+
+ggplot(data=highschool, mapping = aes(y=math, x=read)) +
+  geom_point() + 
+  geom_abline(intercept = B0, slope = B1) +
+  geom_smooth(method=lm)
+```
+
+```{r}
+library(leaps)
+
+regsubsets_out <- regsubsets( math ~ . - id,
+                              data = highschool,
+                              nbest = 1,
+                              nvmax = NULL,
+                              force.in = NULL,
+                              force.out = NULL,
+                              method = 'exhaustive'
+                              )
+summary(regsubsets_out)
+```
+
+```{r}
+plot(regsubsets_out)
+```
+
+```{r}
+highschool <- highschool %>%
+  mutate(score = (read+write+science)/3, score_sq=score^2 )
+
+lm_my_best <- lm(formula= math ~ poly(score,2) + prog, data = highschool)
+summary(lm_my_best)
+plot(lm_my_best)
+```
+
+# **More linear regression discussion**
+
+## **Applying a multiple regression**
+
+```{r}
+model_v1 <- lm(math ~ science + gender,data=highschool)
+summary(model_v1)
+```
+
+The result is a fit formula:
+
+[mathscore] = 21.00 + 0.6\*science + 0.99\*1{gender=female}
+
+```{r}
+highschool %>%
+  ggplot(mapping = aes(y=math, x=science, color=gender)) +
+  geom_point()+
+  geom_abline(intercept=21.99, slope=0.60, color="lightblue") +
+  geom_abline(intercept=20.99, slope=0.60, color="pink")
+
+```
+
+## Non-linear fit functions
+
+```{r}
+real_estate <- read_csv("/Users/pp16/Desktop/NTU/UCL exchange/week 2 day 7/real_estate.csv") %>%
+  filter(price_per_sqm < 100)
+real_estate %>%
+  ggplot(mapping = aes(y=price_per_sqm, x=house_age)) +
+  geom_point() +
+  geom_smooth()
+
+```
+
+For linear:
+
+```{r}
+model_linear = lm(price_per_sqm ~house_age, data=real_estate)
+summary(model_linear)
+```
+
+To fit using a quadratic, or 2nd order polynomial, we can use:
+
+```{r}
+model_poly2 <- lm(price_per_sqm ~ poly(house_age,2) , data=real_estate)
+summary(model_poly2)
+
+```
+
+Next, we can extend the fit to a cubic (3rd order polynomial curve):
+
+```{r}
+model_poly3 <- lm(price_per_sqm ~ poly(house_age,3) , data=real_estate)
+summary(model_poly3)
+
+```
+
+-   n this case, we find the additional coefficient is not significantly different from zero, so there is no statistical evidence that a cubic curve is required to fit the true regression function in this case.
+
+We can use the predict method as above to draw the different fit functions:
+
+```{r}
+real_estate_new <- tibble(house_age = seq(0,40,0.1))
+
+
+real_estate_new$price_per_sqm_linear <- predict(model_linear, newdata = real_estate_new)
+real_estate_new$price_per_sqm_poly2 <- predict(model_poly2, newdata = real_estate_new)
+real_estate_new$price_per_sqm_poly3 <- predict(model_poly3, newdata = real_estate_new)
+
+
+ggplot() +
+  geom_point(data=real_estate,
+             mapping=aes(x=house_age, y=price_per_sqm)
+             ) +
+  geom_line(data=real_estate_new,
+            mapping=aes(x=house_age, y=price_per_sqm_linear),
+            color="black",
+            ) +
+  geom_line(data=real_estate_new,
+            mapping=aes(x=house_age, y=price_per_sqm_poly2),
+            color="red"
+            ) +
+  geom_line(data=real_estate_new,
+            mapping=aes(x=house_age, y=price_per_sqm_poly3),
+            color="blue")
+
+```
+
+## Overfitting
+
+```{r}
+true_relationship <- function(x,sigma=0.1){
+  1-x-x^2+x^3+rnorm(length(x),sd=sigma)
+}
+
+x <- runif(200,min=-1,max=1)
+
+set.seed(1)
+y <- true_relationship(x)
+
+data_all <- data.frame(y,x)
+
+ggplot(data=data_all,
+       aes(x=x,y=y)) +
+  geom_point()
+
+set.seed(1)
+
+
+observations <- sample(1:dim(data_all)[1],20)
+
+
+x <- data_all$x[observations]
+y <- data_all$y[observations]
+
+
+data_a <- data.frame(y,x)
+
+
+ggplot(data=data_a,
+       aes(x=x,y=y)) +
+  geom_point()
+
+```
+
+```{r}
+ggplot() +
+  geom_point(data=data_all,
+             aes(x=x,y=y)) +
+  geom_smooth(data=data_a,
+              aes(x=x,y=y),
+              method="lm",
+              formula=y~poly(x,1),
+              col="red",
+              se=F) +
+  geom_smooth(data=data_a,
+              aes(x=x,y=y),
+              method="lm",
+              formula=y~poly(x,2),
+              col="blue",
+              se=F) +
+  geom_smooth(data=data_a,
+              aes(x=x,y=y),
+              method="lm",
+              formula=y~poly(x,10),
+              col="green",
+              se=F)
+```

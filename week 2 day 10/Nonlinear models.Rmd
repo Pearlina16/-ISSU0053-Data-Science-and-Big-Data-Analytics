@@ -1,0 +1,484 @@
+---
+title: "Nonlinear models"
+output: html_notebook
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you
+execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk
+or by placing your cursor inside it and pressing *Cmd+Shift+Enter*.
+
+$\sum_{i=1}^n (y_i - (\beta_0 + \beta_1x|i))^2$ \$\sum\_{i=1}\^n (y_i)
+
+```{r}
+#install.packages("ISLR")
+library(ISLR)
+library(tidyverse)
+```
+
+```{r}
+data(Wage)
+str(Wage)
+```
+
+```{r}
+glimpse(Wage)
+```
+
+```{r}
+Wage %>%
+  ggplot(aes(y=wage, x=age)) +
+    geom_point()
+```
+
+## Linear Model
+
+```{r}
+lm_1 <- lm(wage~age, data=Wage)
+summary(lm_1)
+```
+
+```{r}
+Wage %>%
+  ggplot(aes(y=wage, x=age)) +
+    geom_point() +
+    geom_smooth(method=lm)
+```
+
+```{r}
+plot(lm_1)
+```
+
+-   Residual vs fitted shows a non linear relationship
+-   Q-Q residuals shows quite abit of deviation at the upper end not
+    really normally distributed
+
+coefficient of B1 0.70728 hence increase wage by \$707.28
+
+The numerical output indicates to us that every year a person ages, they
+are expected to increase their wage by . How reasonable does this seem
+from looking at the plot of the regression line and the diagnostic plots
+for the model?
+
+The plot of the regression line appears to show the data in an “upside
+down u-shape” pattern. Rather than wage increasing linearly with age, it
+appears that wage increases with age up to a certain point, after which
+the relationship reverses and wage starts to decrease with age. The same
+pattern can be seen in the residuals vs fitted values plot.
+
+The behaviour displayed by the data is not necessarily unexpected. As
+younger adults gain experience of the workplace they gain skills (and
+associated promotions) which generally lead them to earn more money. Age
+discrimination might limit the job opportunities available to older
+individuals, reducing their access to higher paying jobs, or older
+individuals may take on part time/casualised work as they have already
+built up sufficient savings or to work around potential health
+conditions.
+
+## Polynomial regression
+
+An alternative possibility might be to build a nonlinear model for wage
+using polynomial functions of age. That is, build a model of the form:
+
+### First order polynomial
+
+The order of a polynomial is the maximum power to which the variable is
+raised. In that sense, the linear model considered above is exactly a
+first order polynomial model.
+
+#### Second order polynomial
+
+```{r}
+lm_2 <- lm(wage~poly(age,2), data=Wage)
+summary(lm_2)
+```
+
+```{r}
+AIC(lm_1)
+AIC(lm_2)
+```
+
+## Cross validation error
+
+```{r}
+library(cvTools)
+set.seed(1)
+cv_1 <- cvFit(lm_1,data=Wage,y=Wage$wage,K=5,R=20)
+print(c(cv_1$cv,cv_1$se))
+```
+
+-   average size of error
+
+```{r}
+cv_2 <- cvFit(lm_2,data=Wage,y=Wage$wage,K=5,R=20)
+print(c(cv_2$cv,cv_2$se))
+```
+
+Likewise, the cross validation error for this model (40.01 with a
+standard error of 0.017) is lower than for the previous model (40.94
+with a standard error of 0.013), supporting the inclusion of the term.
+
+```{r}
+age_grid <- seq(from=min(Wage$age),to=max(Wage$age),length.out=100)
+age_grid_df <- tibble(age=age_grid)
+age_grid_df$wage_predicted <- predict(lm_2,newdata=age_grid_df)
+
+Wage %>%
+  ggplot(aes(y=wage, x=age)) +
+    geom_point() +
+    geom_line(data=age_grid_df,
+              mapping=aes(y=wage_predicted,x=age),
+              color="red")
+```
+
+## Third Order polynomial
+
+```{r}
+lm_3 <- lm(wage~poly(age,3), data=Wage)
+summary(lm_3)
+```
+
+```{r}
+AIC(lm_2)
+AIC(lm_3)
+
+```
+
+```{r}
+set.seed(1)
+print(c(cv_2$cv,cv_2$se))
+```
+
+```{r}
+cv_3 <- cvFit(lm_3,data=Wage,y=Wage$wage,K=5,R=20)
+print(c(cv_3$cv,cv_3$se))
+```
+
+Likewise, the cross validation error for this model (39.95 with a
+standard error of 0.019) is lower than for the previous model (40.01
+with a standard error of 0.017), supporting the inclusion of the age\^3
+term.
+
+```{r}
+age_grid <- seq(from=min(Wage$age),to=max(Wage$age),length.out=100)
+age_grid_df <- tibble(age=age_grid)
+age_grid_df$wage_predicted <- predict(lm_3,newdata=age_grid_df)
+
+Wage %>%
+  ggplot(aes(y=wage, x=age)) +
+    geom_point() +
+    geom_line(data=age_grid_df,
+              mapping=aes(y=wage_predicted,x=age),
+              color="red")
+
+```
+
+## Twentieth order polynomial
+
+```{r}
+summary(lm_3)$adj.r.squared
+lm_20 <- lm(wage~poly(age,20), data=Wage)
+summary(lm_20)$adj.r.squared
+```
+
+```{r}
+AIC(lm_3)
+AIC(lm_20)
+```
+
+```{r}
+set.seed(1)
+print(c(cv_3$cv,cv_3$se))
+cv_20 <- cvFit(lm_20,data=Wage,y=Wage$wage,K=5,R=20)
+print(c(cv_20$cv,cv_20$se))
+```
+
+According to the adjusted Rsquare the twentieth order polynomial model
+is superior, while AIC and cross validation indicate that the third
+order polynomial model is superior. In such cases we can make arguments
+in favour of either of the two models, but might generally prefer to
+base our decision making on the cross validation results.
+
+```{r}
+age_grid <- seq(from=min(Wage$age),to=max(Wage$age),length.out=100)
+age_grid_df <- tibble(age=age_grid)
+age_grid_df$wage_predicted <- predict(lm_20,newdata=age_grid_df)
+
+Wage %>%
+  ggplot(aes(y=wage, x=age)) +
+    geom_point() +
+    geom_line(data=age_grid_df,
+              mapping=aes(y=wage_predicted,x=age),
+              color="red")
+```
+
+## Spline models
+
+Polynomial models can suffer from the influence of every observation on
+the prediction at every value of x. We might work around this by fitting
+different models to different ranges of x
+
+Consider:
+
+The breakpoint between the models, , might then be referred to as a
+knot.
+
+## Naive spline
+
+```{r}
+Wage_left <- Wage[Wage$age<median(Wage$age),]
+Wage_right <- Wage[Wage$age>=median(Wage$age),]
+
+lm_3_left <- lm(wage~poly(age,3),data=Wage_left)
+lm_3_right <- lm(wage~poly(age,3),data=Wage_right)
+
+age_grid_left <- seq(min(Wage$age),median(Wage$age),l=50)
+age_grid_df_left <- tibble(age=age_grid_left)
+age_grid_df_left$wage_predicted <- predict(lm_3_left,newdata=age_grid_df_left)
+
+age_grid_right <- seq(median(Wage$age),max(Wage$age),l=50)
+age_grid_df_right <- tibble(age=age_grid_right)
+age_grid_df_right$wage_predicted <- predict(lm_3_right,newdata=age_grid_df_right)
+
+age_grid_df <- rbind(age_grid_df_left,age_grid_df_right)
+
+Wage %>%
+  ggplot(aes(y=wage,x=age)) +
+    geom_point() +
+    geom_line(data=age_grid_df,
+              mapping=aes(y=wage_predicted,x=age),
+              color="red")
+```
+
+There are two downsides to this type of model.
+
+The first is the likelihood of a discontinuity at the knot. It is very
+likely that at the knot, the value of the left polynomial is not
+identical to the value of the right polynomial. Not only are the values
+of the polynomials likely to differ at the knot, the values of the
+derivatives (rates of change) of the polynomials are likely to differ at
+the knot.
+
+Ideally, we would like continuity (of the fitted model and its
+derivatives) at the knot. In such cases we would not see a jump in the
+value of wage at a particular value of age, nor would we see one
+relationship of wage with age on one side of the knot and a dramatically
+different relationship on the other side of the knot.
+
+The second downside is a rapid increase in model complexity. The code
+above includes a single knot and third order polynomials, leading to
+eight different coefficients (that is, the model has eight degrees of
+freedom).
+
+If we were to add another knot then we would add another four
+coefficients. If we were to increase the degree of our polynomial by
+one, we would add a number of coefficients equal to the number of knots
+plus one.
+
+All together, k knots and polynomials of order p results in a total of
+(p+1) x (k+1) coefficients. Hopefully, this gives some insight that
+models like this one can quickly become highly flexible and in danger of
+overfitting.
+
+To resolve this issues: \## Basis splines Divide the covariance range
+into diff regions X\<X\* and X\>= X\* Implement constraints: Those three
+constraints enforce equality in the functions, their first derivatives
+and their second derivatives at the knot. That ensures a degree of
+smoothness at the knot, resolving one of the concerns of the previous
+naive model.
+
+The presence of these constraints reduces the flexibility of the model.
+Specifically, the three constraints reduce the degrees of freedom by
+three, resulting in a model with (4x2)-3=5 degrees of freedom. Extending
+this logic, a model of this form using -dimensional polynomials
+constrained to agree up to and including the (p-1)th derivative at k
+knots will have a total of p+1+k degrees of freedom. This is a dramatic
+reduction from the (p+1) x (k+1) degrees of freedom of the previous
+naive model.
+
+```{r}
+library(splines)
+fit_spline1 <- lm(wage~bs(age,knots=quantile(Wage$age,c(0.25,0.5,0.75))),data=Wage)
+
+age_grid_df$wage <- predict(fit_spline1,newdata=age_grid_df)
+
+ggplot(mapping=aes(y=wage,x=age)) +
+  geom_point(data=Wage) +
+  geom_line(data=age_grid_df,color="red")
+```
+
+-   splitting at the median
+-   constraints makes it smooth
+
+Alternatively, it is possible to fit such models by specifying the
+desired degrees of freedom of the resulting model (the default is to use
+third order polynomials, but this can be modified via the degree
+argument to the bs function).
+
+```{r}
+fit_spline2 <- lm(wage~bs(age,df=7),data=Wage)
+
+age_grid_df$wage <- predict(fit_spline2,newdata=age_grid_df)
+
+ggplot(mapping=aes(y=wage,x=age)) +
+  geom_point(data=Wage) +
+  geom_line(data=age_grid_df,color="red")
+```
+
+-   changing to 21 degrees of freedom
+
+```{r}
+fit_spline3 <- lm(wage~bs(age,df=21),data=Wage)
+
+age_grid <- seq(from=min(Wage$age),to=max(Wage$age),length.out=100)
+age_grid_df <- tibble(age=age_grid)
+
+age_grid_df_poly <- age_grid_df
+age_grid_df_poly$wage_predicted <- predict(lm_20,newdata=age_grid_df_poly)
+
+age_grid_df_spline <- age_grid_df
+age_grid_df_spline$wage_predicted <- predict(fit_spline3,newdata=age_grid_df_spline)
+
+Wage %>%
+  ggplot(aes(y=wage, x=age)) +
+    geom_point() +
+    geom_line(data=age_grid_df_spline,
+              mapping=aes(y=wage_predicted,x=age),
+              color="red") +
+    geom_line(data=age_grid_df_poly,
+              mapping=aes(y=wage_predicted,x=age),
+              color="blue")
+```
+
+\## Optimising degrees of freedom - if flexibility is too low, we cannot
+learn the data - if flexibility is too high, overfitting Quantifying the
+accuracy of predictions for test data using models fitted to training
+data is one way to identify the sweet spot between underfitting and
+overfitting. Cross validation is one way to achieve this.
+
+```{r}
+set.seed(2)
+
+n <- nrow(Wage)
+
+df_vals <- 4:25
+
+n_vals <- length(df_vals)
+
+results <- data.frame(df = rep(0,n_vals),
+                      rmse_training = rep(0,n_vals),
+                      rmse = rep(0,n_vals),
+                      se = rep(0,n_vals))
+
+#repeatedly read and store the results
+for (i in 1:n_vals){ 
+  
+  df_i <- df_vals[i]
+  
+  fit_spline <- lm(wage~bs(age,df=df_i),data=Wage)
+  
+  cv_result <- cvFit(fit_spline, data = Wage,y = Wage$wage, K = 10, R = 10)
+  
+  results$df[i] <- df_i
+  results$rmse[i] <- cv_result$cv
+  results$se[i] <- cv_result$se
+  
+  wage_pred <- predict(fit_spline)
+  rmse_train <- sqrt(sum((Wage$wage - wage_pred)^2)/n)
+  results$rmse_training[i] <- rmse_train
+  
+}
+
+print(results)
+
+```
+
+```{r}
+ggplot(data=results) +
+  geom_point(mapping=aes(x=df, y=rmse)) +
+  geom_point(mapping=aes(x=df, y=rmse_training), color="red")
+```
+
+-   U shaped curve in the black points (at dof = 5 may be the most
+    optimal as the test error is the smallest)
+-   Degree of freedoms above 10 is too flex which leads to overfitting
+
+```{r}
+best_rmse <- min(results$rmse)
+best_row <- which.min(results$rmse)
+best_df <- results$df[best_row]
+best_se <- results$se[best_row]
+
+ggplot(data=results) +
+  geom_point(mapping=aes(x=df, y=rmse)) +
+  geom_errorbar(mapping=aes(x=df, ymin=rmse-2*se, ymax=rmse+2*se)) +
+  geom_hline(yintercept = best_rmse, linetype="dashed") +
+  geom_hline(yintercept = best_rmse+2*best_se, linetype="dotted") +
+  geom_hline(yintercept = best_rmse-2*best_se, linetype="dotted")
+
+```
+
+To identify the best overall model, we first consider the model with the
+lowest cross validation error. In this case, that is the model with five
+degrees of freedom.
+
+We then consider the uncertainty in that error. The error bars for the
+model with five degrees of freedom indicate that its performance is not
+statistically distinguishable from the models with four, six, seven, ten
+or eleven degrees of freedom.
+
+We generally aim for *parsimony* – using the least complicated model we
+can get away with. As a result, we would make the decision to put
+forwards the model with four degrees of freedom as our best model in
+this case – it is the least complicated model which has error which is
+indistinguishable from the model with the very lowest error.
+
+-   variability of error is denote by the whiskers
+-   should we take dof=5 to be the best because the median is lowest or
+    take dof=7 bec the variability is smaller than that of dof=5
+-   we choose simplest model (lowest dof) dof=4 error is not
+    indistinguishable as compared to the lowest model (dof=5) and the
+    variability
+
+## Local Regression
+
+The weighting function applies full weight to values at x, falling to
+zero as we move further away from x. The rate at which the weight
+function decays is inversely related to what is called the span by the R
+function *loess*.
+
+-   span controls the weights
+
+```{r}
+fit_loess1 <- loess(wage~age,span=.2,data=Wage)
+fit_loess2 <- loess(wage~age,span=1,data=Wage)
+
+summary(fit_loess1)
+```
+
+```{r}
+summary(fit_loess2)
+```
+
+-   small span ==\> large DOF, large span
+-   big span ==\> apply weights on bigger region(blue)
+-   small span ==\> apply weights on observations close to that region
+
+```{r}
+age_grid_df_l1 <- age_grid_df
+age_grid_df_l2 <- age_grid_df
+
+age_grid_df_l1$wage <- predict(fit_loess1, newdata = age_grid_df_l1)
+age_grid_df_l2$wage <- predict(fit_loess2, newdata = age_grid_df_l2)
+
+ggplot(mapping=aes(y=wage, x=age)) +
+  geom_point(data=Wage) +
+  geom_line(data=age_grid_df_l1, color="red") +
+  geom_line(data=age_grid_df_l2, color="blue")
+```
+
+### Interpretability

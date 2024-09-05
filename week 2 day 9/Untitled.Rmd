@@ -1,0 +1,234 @@
+---
+title: "Day 9 Bootstrapping and Cross Validation"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+# for loop
+
+```{r}
+for (i in 1:5){
+  print (i)
+}
+```
+```{r}
+sum_i = 0
+
+for (i in 1:5){
+  sum_i = sum_i + i
+  print(sum_i)
+}
+```
+In this instance, it is possible to write all of the code in a single line, without the use of braces
+
+```{r}
+sum_i <- 0
+for (i in 1:5) sum_i <- sum_i+i; print(sum_i)
+```
+
+## Using a for loop to run repeated samplings
+
+```{r}
+set.seed(111)
+data = rnorm(n=20, mean = 120, sd=10)
+
+```
+
+## mean of sample
+```{r}
+mean(data)
+```
+
+## standard error of sample mean
+```{r}
+n = length(data)
+standard_error = sd(data)/ sqrt(n)
+standard_error
+```
+## standard error of population
+```{r}
+10/sqrt(20)
+```
+
+# 95% CI
+```{r}
+upper_limit = mean(data) + 2*sd(data)/sqrt(n)
+upper_limit
+```
+
+```{r}
+lower_limit = mean(data) - 2*sd(data)/sqrt(n)
+lower_limit
+```
+
+## Repeated loops
+
+Draw 100 samples, create empty vector sample_means with 100 entries
+```{r}
+set.seed(111)
+sample_means = rep(0,100)
+for(i in 1:100){
+  sim_data = rnorm(n=20, mean = 120, sd=10)
+  sample_means[i] = mean(sim_data)
+}
+```
+
+```{r}
+library(tidyverse)
+
+ggplot() + 
+  geom_histogram(aes(x=sample_means, y= after_stat(density)), binwidth=1) +
+  stat_function(fun = dnorm, args=list(mean = 120, sd=10/sqrt(20)), color="red")                 
+```
+width (sd) of the distribution is the std error 
+```{r}
+sd(sample_means)
+```
+
+95% CI 
+```{r}
+quantile(sample_means, c(0.025, 0.975))
+```
+
+With greater number of samples
+```{r}
+m = c(100,1000,10000)
+
+for (j in 1:3){
+  sample_means = rep(0,m[j]) #create that many samples 100, 1000, 10000
+  for(i in 1:m[j]){
+    sim_data = rnorm(n=20, mean=120, sd=10)
+    sample_means[i] = mean(sim_data)
+  }
+  print(ggplot() + 
+          geom_histogram(aes(x=sample_means, y=after_stat(density)), binwidth=1) + 
+          stat_function(fun=dnorm, args=list(mean=120, sd=10/sqrt(20)), color = "red")) 
+}
+
+```
+
+# Resampling datasets
+```{r}
+set.seed(111)
+sim_data <- rnorm(n = 20, mean = 120, sd = 10)
+bootstrapped_data <- sample(sim_data, size = 20, replace = T)
+table(bootstrapped_data)  
+
+```
+```{r}
+ggplot() +
+  geom_point(mapping=aes(y=sim_data, x="1 - Original sample")) +
+  geom_point(mapping=aes(y=bootstrapped_data, x="2 - Boostrap resample")) +
+  geom_jitter(mapping=aes(y=bootstrapped_data, x="3 - Jittered bootstrap resample"))
+
+
+
+```
+Some of the points are repeated in bootstrap (hence missing points on bootstrap resample) but the number of samples is the same as original. 
+Jittered shows how many times the points are repeated. for example at 115, boostrap resample 3 times 
+
+We can repeat the resampling many times to construct a distribution of results:
+
+```{r}
+sim_data <- rnorm(n = 20, mean = 120, sd = 10)
+
+bootstrapped_means <- rep(0, 100)
+
+for (i in 1:100){
+  bootstrapped_data <- sample(sim_data, size = 20, replace = T)
+  bootstrapped_means[i] <- mean(bootstrapped_data)
+}
+```
+
+```{r}
+ggplot() +
+  geom_histogram(mapping=aes(x=bootstrapped_means), binwidth=1)
+```
+
+# Applying the bootstrap method to quantify the uncertainty in model coefficients
+```{r}
+library(tidyverse)
+
+select <- dplyr::select
+
+female_labels <- c("male","female")
+race_labels <- c("hispanic", "asian", "african-american", "white")
+ses_labels <- c("low", "middle", "high")
+schtyp_labels <- c("public","private")
+prog_labels <- c("general", "academic", "vocational")
+
+highschool <- read_csv("/Users/pp16/Desktop/NTU/UCL exchange/week 1 day 3/hsb2.csv", col_types = "dfffffddddd") %>%
+  mutate(gender = factor(female, levels = c(0,1),labels = female_labels),
+         race = factor(race, levels = c(1,2,3,4), labels = race_labels),
+         ses = factor(ses, levels = c(1,2,3),labels = ses_labels),
+         schtyp = factor(schtyp, levels = c(1,2), labels = schtyp_labels),
+         prog = factor(prog, levels = c(1,2,3), labels = prog_labels)
+         ) %>%
+  select(-female)
+glimpse(highschool)
+```
+```{r}
+lm_simple <- lm(read ~ write + prog, data=highschool)
+
+summary(lm_simple)
+```
+```{r}
+plot(lm_simple)
+```
+
+QQplot : Our residuals follow normal distribution (most of the points lie on the line)
+
+```{r}
+str( summary(lm_simple) )
+```
+coefficients : num [1:4, 1:4] ==> 4x4 matrix
+
+In this case the fit coefficients can be accessed from the fit summary using $coefficients[].
+```{r}
+B1 <- summary(lm_simple)$coefficients[2,1] # write coefficient
+B2 <- summary(lm_simple)$coefficients[3,1] # progacademic coefficient
+B3 <- summary(lm_simple)$coefficients[4,1] # progvocational coefficient
+
+```
+
+To use the bootstrap method to explore how the coefficients change when the dataset is resampled, we follow the method from above, but this time select rows from the original dataset at random, with the sample_n function:
+```{r}
+n_repeats <- 100
+
+B1_vals <- rep(0, n_repeats)
+B2_vals <- rep(0, n_repeats)
+B3_vals <- rep(0, n_repeats)
+
+n <- nrow(highschool)
+
+for (i in 1:n_repeats){
+  highschool_bstrap <- sample_n(highschool, size = 200, replace=T )
+  lm_simple <- lm(read ~ write + prog, data=highschool_bstrap)
+  
+  B1 <- summary(lm_simple)$coefficients[2,1]
+  B2 <- summary(lm_simple)$coefficients[3,1]
+  B3 <- summary(lm_simple)$coefficients[4,1]
+  
+  B1_vals[i] <- B1
+  B2_vals[i] <- B2
+  B3_vals[i] <- B3
+}
+
+B1_sd <- sd(B1_vals)
+B2_sd <- sd(B2_vals)
+B3_sd <- sd(B3_vals)
+```
+sample_n ==> selecting rows from dataframes not js data 
+use bootstrapped sample 
+
+actually attain vs theory suggests
+```{r}
+paste("coef: bootstrap SD : lm fit estimate SE")
+paste( "B1:  ",round(sd(B1_vals),3),"       :",round(summary(lm_simple)$coefficients[2,2],3))
+paste( "B2:  ",round(sd(B2_vals),3),"       :",round(summary(lm_simple)$coefficients[3,2],3))
+paste( "B3:  ",round(sd(B3_vals),3),"       :",round(summary(lm_simple)$coefficients[4,2],3))
+```
+
