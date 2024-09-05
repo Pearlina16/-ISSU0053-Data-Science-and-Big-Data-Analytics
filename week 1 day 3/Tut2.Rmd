@@ -1,0 +1,142 @@
+---
+title: "Tut 2"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*.
+
+# Exercise
+
+```{r}
+install.packages("tidyverse")
+library(tidyverse)
+```
+```{r}
+setwd("/Users/pp16/Desktop/NTU/UCL exchange/week 1 day 3")
+children = read_csv("children_bodysize.csv")
+```
+
+-   Check data types for each column
+
+```{r}
+head(children)
+```
+
+-   Plot showing heights vs age
+
+```{r}
+plot(stature~age, data=children)
+```
+
+1.  How many entries are in the dataset?
+
+```{r}
+dim(children)
+```
+
+2.  What are the youngest and oldest ages of individuals in the dataset?
+
+```{r}
+min(children$age)
+max(children$age)
+```
+
+3.  What is the tallest individual in the dataset, are they male or female?
+
+```{r}
+max(children$stature)
+gender = children[children$stature==max(children$stature),]
+gender$gender
+```
+
+4.  How many boys are in the dataset?
+
+```{r}
+sum(children$gender=="M")
+```
+
+5.  How many girls over the age of 12?
+
+```{r}
+
+sum((children$gender=="F") & (children$age > 144))
+
+```
+
+6.  What is the mean height of a 5 year old boy and 5 year old girl?
+
+```{r}
+five = children[children$age == 60,]
+boy = five[five$gender=="M",]
+boymean= mean(boy$stature)
+boymean
+girl = five[five$gender=="F",]
+girlmean = mean(girl$stature)
+girlmean
+```
+
+7.  What is the mean height of a 15 year old boy and 15 year old girl?
+
+```{r}
+age = children[children$age == 180, ]
+boys = age[age$gender=="M",]
+boysmean = mean(boys$stature)
+boysmean
+girls = age[age$gender=="F",]
+girlsmean=mean(girls$stature)
+girlsmean
+```
+
+8.  Use a histogram to show the distribution of children’s ages
+
+```{r}
+hist(children$age)
+```
+
+9.  What does the distribution of the heights of 9 year old males look like?
+
+```{r}
+male = children[children$gender=="M" & children$age == 108, ] 
+male
+hist(male$stature)
+```
+
+# Challenges
+
+-   Create a column height_cm containing the height in cm (1cm = 10mm)
+
+```{r}
+
+children$height_cm = children$stature/ 10
+head(children)
+```
+
+-   Create a column containing the age in years
+
+```{r}
+children$age_years = children$age/12
+head(children)
+```
+
+-   Plot showing the average height of children by age
+
+```{r}
+rm(mean)
+avg = aggregate(height_cm~age_years, data=children, FUN = mean)
+plot(avg,children$age_years, pch = ".")
+```
+```{r}
+bodysize_mod = group_by(children, age_years, gender)
+height_by_age = summarise(bodysize_mod, height = mean(height_cm) )
+plot(height~age_years, type="line", data=filter(height_by_age, gender=="M"))
+lines(height~age_years, col="red", data=filter(height_by_age, gender== "F"))
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.

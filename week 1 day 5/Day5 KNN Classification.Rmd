@@ -1,0 +1,291 @@
+---
+title: "Day 5 KNN classification"
+output: html_notebook
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you
+execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk
+or by placing your cursor inside it and pressing *Cmd+Shift+Enter*.
+
+```{r}
+library(tidyverse)
+setwd("/Users/pp16/Desktop/NTU/UCL exchange/week 1 day 5")
+```
+
+```{r}
+dragonfly <- read_csv("dragonfly.csv")
+```
+
+```{r}
+dragonfly <- mutate(dragonfly, species=factor(species))
+```
+
+```{r}
+ggplot(data = dragonfly,
+       mapping=aes(y=wspan,
+                   x=mass,
+                   color=species)) +
+  geom_point()
+```
+
+We can see that:
+
+there is a general trend, with larger mass meaning larger wingspan
+species A tends to have smaller wingspan and mass species B tends to
+have larger wingspan and mass the larger species A dragonflies are
+similar in size to smaller species B dragonflies.
+
+```{r}
+dragonfly2 <- read_csv("dragonfly2.csv")
+```
+
+```{r}
+ggplot() +
+  geom_point(data = dragonfly,
+             mapping=aes(y=wspan,
+                         x=mass,
+                         color=species)) +
+  geom_point(data = dragonfly2,
+             mapping=aes(y=wspan,
+                         x=mass),
+             colour="black", size=0.5) +
+  geom_text(data = dragonfly2,              # adds text labels from id column
+            mapping=aes(y=wspan,
+                        x=mass,
+                        label=id),
+            size=1.5,                       # adjusts text size
+            nudge_y=.2)                     # nudges text up to avoid overlapping
+```
+
+Some points like (6/28) seems unclear to be species A or B hence we
+looking at the number of neighbours that belong to which species to
+identify that species.
+
+```{r}
+# create species column in dragonfly2 with NA entries
+dragonfly2$species <- NA #add a column species to dragonfly2
+
+dragonfly_all <- bind_rows(dragonfly, dragonfly2) #combine to a single dataframe
+```
+
+```{r}
+# to mutate a set of columns we can use the mutate_at() function
+# and pass the column names we want it to operate on
+
+dragonfly_all_norm <- dragonfly_all %>%
+  mutate_at(c("mass","wspan"),scale)
+
+# after applying the same scaling to all the data we can split it back
+# into the original groups
+
+dragonfly_norm <- dragonfly_all_norm %>%  #if not na put in dragonfly_norm
+  filter(is.na(species) == FALSE)
+
+dragonfly2_norm <- dragonfly_all_norm %>% #if na put in dragonfly2_norm
+  filter(is.na(species) == TRUE)
+```
+
+```{r}
+df_train <- dragonfly_norm
+df_test <- dragonfly2_norm
+X_train <- select(df_train, wspan, mass)
+Y_train <- df_train$species
+
+# Note here we can't use Y_train <- select(df_train, species)
+# because the select() function returns a data.frame with one column
+# and knn() expects a vector not a dataframe
+
+X_test <- select(df_test, wspan, mass)
+```
+
+Now we can apply the method using k=5 so that we look at the nearest 5
+neighbours:
+
+```{r}
+install.packages(class)
+library(class)
+
+Y_test_predicted <- knn(X_train, X_test, Y_train, k=5)
+```
+
+Let’s put the prediction back into our dragonfly dataframe:
+
+```{r}
+
+df_test$species_predicted <- Y_test_predicted
+```
+
+```{r}
+ggplot() +
+  geom_point(data = df_train,
+             mapping=aes(y=wspan,
+                         x=mass,
+                         color=species),
+             alpha=0.1) +                 # alpha sets these to be transparent
+  geom_point(data = df_test,
+             mapping=aes(y=wspan,
+                         x=mass,
+                         color=species_predicted),
+             shape=3, size=0.5) +
+  geom_text(data = df_test,
+            mapping=aes(y=wspan,
+                        x=mass,
+                        label=id),
+            size=1.5,
+            nudge_y=.2)
+```
+
+```{r}
+df_test_labels <- read_csv("dragonfly2_labels.csv")
+df_test$species_actual <- factor(df_test_labels$species_actual)
+
+head(df_test)
+```
+
+```{r}
+table(actual = df_test$species_actual,
+      predicted = df_test$species_predicted)
+
+
+```
+
+```{r}
+n_correct <- sum(df_test$species_actual == df_test$species_predicted)
+n_incorrect <- sum(df_test$species_actual != df_test$species_predicted)
+
+# how these work:
+# df_test$species_actual == df_test$species_predicted
+# produces vector of TRUE / FALSE values which
+# stores TRUE where prediction matched values / FALSE otherwise
+# sum() function acts to count number of TRUE entries in a vector
+# as treats TRUE as having value 1 and FALSE having value 0
+
+n_total <- n_correct + n_incorrect
+
+accuracy <- n_correct / n_total
+accuracy
+```
+
+# Exercise
+
+-   load file penguins_knn.csv this has an extra column species_actual
+    containing all species which we can use to check the results.
+
+```{r}
+library(tidyverse)
+penguin = read_csv("penguins_knn.csv")
+```
+
+-   normalise the columns used for prediction species (flipper length,
+    body mass, bill length, bill depth)
+
+```{r}
+penguin_all_norm = penguin %>% 
+  mutate_at(c("flipper_length_mm", "body_mass_g", "bill_length_mm", "bill_depth_mm"), scale)
+
+penguin_norm = penguin_all_norm %>% 
+  filter(is.na(species) == FALSE) 
+
+penguin2_norm = penguin_all_norm %>% 
+  filter(is.na(species)==TRUE)
+```
+
+-   construct dataframes penguin_train and penguin_test use ggplot to
+    make a
+
+```{r}
+penguin_train = drop_na(penguin_norm)
+penguin_test = penguin2_norm
+
+```
+
+-   plot showing a geom_point scatter plot for the training data,
+    colouring the points by species.
+
+```{r}
+ggplot() +
+  geom_point(data = penguin_train, 
+             mapping = aes(y= flipper_length_mm, x= body_mass_g, color=species))
+```
+
+-   modify the plot to include the points from the test dataset.
+
+```{r}
+ggplot() +
+  geom_point(data = penguin_train, 
+             mapping = aes(y= flipper_length_mm, x= body_mass_g, color=species)) +
+  geom_point(data=penguin_test, 
+             mapping=aes(y=flipper_length_mm, x=body_mass_g, color=species), 
+             shape=3, size=1) +
+   geom_text(data = penguin_test,
+            mapping=aes(y=flipper_length_mm,
+                        x=body_mass_g,
+                        label=id),
+            size=1.5,
+            nudge_y=.2)
+
+```
+
+-   by referring to the example code above, construct X_train, Y_train,
+    and X_test use the knn() function to create predictions setting to 5
+    and store the output as Y_test
+
+```{r}
+X_train = select(penguin_train, body_mass_g, flipper_length_mm)
+Y_train = penguin_train$species
+X_test = select(penguin_test, body_mass_g, flipper_length_mm)
+#install.packages(class)
+library(class)
+set.seed(100)
+Y_test <- knn(X_train, X_test, Y_train, k=5)
+Y_test
+```
+
+-   write the predictions Y_test into the penguin test dataframe as
+    species_predicted
+-   create a confusion table to display the results.
+
+```{r}
+penguin_test$species_predicted = Y_test
+table(actual = penguin_test$species_actual, predicted = penguin_test$species_predicted)
+```
+
+Check you can interpret it by answering the following questions: - How
+many penguins in the test dataset were predicted as Adelie? 18+1 = 19 -
+How many penguins in the test dataset were actually Adelie? 18+2 = 20 -
+How many penguins in the test dataset were correctly predicted Gentoo?
+20 - How many penguins in the test dataset were incorrectly predicted
+Gentoo? 0 - How many penguins in the test dataset were actually
+Chinstrap but predicted to be Adelie? 1
+
+-   calculate the number of correct predictions,and the overall
+    accuracy.
+
+```{r}
+n_correct = sum(penguin_test$species_actual == penguin_test$species_predicted)
+n_incorrect = sum(penguin_test$species_actual != penguin_test$species_predicted)
+n_total = n_correct + n_incorrect
+accuracy = n_correct/n_total
+accuracy
+
+
+(18+9+20) / 50
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or
+by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output
+will be saved alongside it (click the *Preview* button or press
+*Cmd+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the
+editor. Consequently, unlike *Knit*, *Preview* does not run any R code
+chunks. Instead, the output of the chunk when it was last run in the
+editor is displayed.

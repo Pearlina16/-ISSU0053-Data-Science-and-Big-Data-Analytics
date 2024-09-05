@@ -1,0 +1,110 @@
+---
+title: "Day 6 Statistical learning"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*.
+
+# Hypothesis Testing
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+library(palmerpenguins)
+data(penguins)
+```
+
+```{r}
+adelie <- penguins %>%
+filter(species == "Adelie") %>%
+drop_na()
+adelie
+```
+
+-   Question: Is there a difference in body mass for male and female Adelie penguins?
+
+```{r}
+penguins %>% 
+  filter(species=="Adelie") %>%
+  drop_na() %>%
+  group_by(sex) %>% 
+  summarise(count=n(), body_mass_g=mean(body_mass_g))
+```
+
+```{r}
+t.test(body_mass_g~sex, data = adelie)
+```
+
+Let’s calculate the mean, n, sd for female Adelie body weight:
+
+```{r}
+adelie_f <- filter(adelie, sex=="female")
+mu <- mean( adelie_f$body_mass_g )
+mu
+
+n=nrow(adelie_f)
+n
+
+standard_error = sd(adelie_f$body_mass_g)/sqrt(n)
+standard_error
+  
+```
+
+Our 95% confidence interval on our mean measurement is
+
+```{r}
+qt(0.975,135.69)
+mu-1.97*standard_error
+mu+1.97*standard_error
+```
+
+## Hypothesis: mass of female Adelie penguins changed from 2007 to 2008
+
+```{r}
+table(adelie_f$year)
+```
+
+```{r}
+adelie_f_2007_08 <- adelie_f %>% filter(year>=2007, year<=2008)
+t.test(body_mass_g~year, adelie_f_2007_08)
+```
+
+# Exercise
+
+## Example 1: Use a t-test to test the hypothesis that males and females have different body mass.
+
+```{r}
+chinstrap = filter(penguins, species == "Chinstrap")
+t.test(body_mass_g ~ sex, chinstrap )
+```
+
+To test that females body mass is less than males we would use the one sided test.
+
+```{r}
+female = filter(chinstrap, sex=="female")
+male = filter(chinstrap, sex=="male")
+t.test(female$body_mass_g,male$body_mass_g, alternative = "less")
+```
+
+## Example 2
+
+In this example we will look to see if there is evidence that the penguin bodymass differed for the chinstrap population sampled in 2007 vs 2008 the chinstrap population sampled in
+
+```{r}
+chinstrap_0708 = chinstrap %>%
+  filter(year>=2007, year<=2008 )
+
+t.test(body_mass_g~year, chinstrap_0708)
+```
+
+Anova test
+
+```{r}
+result = aov(body_mass_g ~ species, data = penguins)
+summary(result)
+TukeyHSD(result)
+```

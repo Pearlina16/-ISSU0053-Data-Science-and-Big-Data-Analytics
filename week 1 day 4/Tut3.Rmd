@@ -1,0 +1,247 @@
+|                       |
+|-----------------------|
+| title: "Day 3"        |
+| output: html_notebook |
+
+## Introduction to R Notebook
+
+R Notebooks provide a powerful and flexible way to interactively develop and share your R code. They allow you to combine code, output, and narrative text in a single document, making them ideal for data analysis, exploration, and reporting.
+
+. Getting Started with R Notebooks
+
+1- Creating an R Notebook
+
+-   Open RStudio.
+
+-   Go to `File > New File > R Notebook`.
+
+2- Structure of an R Notebook
+
+-   An R Notebook consists of text chunks and code chunks.
+
+-   Text chunks are written in Markdown.
+
+-   Code chunks are written in R and are enclosed by triple back ticks with `{r}` at the beginning.
+
+-   You can run the code chunks individually and see the output immediately below the chunk
+
+## Simple code block in R Notebook
+
+```{r}
+#This is a code chunk 
+print("Hello")
+```
+
+-   Follow this link for more information on [R Markdown](http://rmarkdown.rstudio.com) .
+
+## Using R Notebook and Tidyverse function for `hsb2` dataset
+
+-   We will address some questions from the Day 3 document by utilizing tidyverse functions and documenting our code within an R Notebook.
+
+```{r, warning=FALSE,error=FALSE}
+
+library(tidyverse)
+```
+
+```{r}
+#Import Highschool data  and call it "highschool_raw"
+highschool_raw = read_csv("/Users/pp16/Desktop/NTU/UCL exchange/week 1 day 3/hsb2.csv")
+```
+
+### changing the levels enteries to labels using `mutate`
+
+```{r}
+
+#use Mutate command(change the levelss to factor variables)  to creat a dataframe named "highschool" from highschool_raw 
+library(dplyr)
+highschool = mutate(highschool_raw,
+                    gender = factor(female, levels=c(0,1), labels=c("M","F")),
+                    race = factor(race, levels=c(1,2,3,4), labels = c("hispanic", "asian", "african-american", "white")),
+                    ses = factor(ses,levels = c(1,2,3), labels = c("low", "middle", "high")),
+                    schtyp = factor(schtyp, levels=c(1,2), labels=c("public","private")),
+                    prog = factor(prog, levels=c(1,2), labels=c("general","academic" )),
+)
+
+
+#remove female column, use `select` command
+highschool_modified = select(highschool, race, ses, schtyp, prog, read, write, math, science, socst)
+highschool_modified = select(highschool, -female)
+
+# check highschool data 
+head(highschool)
+head(highschool_modified)
+```
+
+### renaming columns with `rename`
+
+```{r}
+
+#rename columns as follows:
+#socioeconomic_group = ses,
+#racial_group = race,
+#school_type = schtyp,
+
+highschool_rename = rename(highschool_modified, 
+                           socioeconomic_group = ses,
+                           racial_group = race,
+                           school_type = schtyp,)
+
+head(highschool_rename)
+```
+
+### Examples of tidyverse code
+
+-   Answer the following : **Average scores for girls from public school**
+
+```{r}
+scores = filter(highschool, schtyp=="public", gender=="F")
+avgscore = select(scores, read, write, math, science, socst)
+meanscore = summarise(avgscore,
+                      avgread= mean(read),
+                      avgwrite=mean(write),
+                      avgmath = mean(math),
+                      avgscience=mean(science),
+                      avgsocst=mean(socst),)
+print(meanscore)
+```
+
+**Average scores for African-american students**
+
+```{r}
+a = filter(highschool, race=="african-american")
+newa = select(scores, read, write, math, science, socst)
+meana = summarise(avgscore,
+                      avgread= mean(read),
+                      avgwrite=mean(write),
+                      avgmath = mean(math),
+                      avgscience=mean(science),
+                      avgsocst=mean(socst),)
+print(meana)
+
+```
+
+**Data frame containing only student scores**
+
+```{r}
+student = select(scores, id, read:socst)
+student
+```
+
+### Pipes
+
+Pipes `%>%` allow you to chain commands together, making your code more readable and efficient. The `tidyverse` package provides the pipe operator, and it is also included in the `dplyr` package.
+
+## Pipe operators : `hsb2` data
+
+-   Now that we are familiar with the hsb2 data, let's use the pipe operator to make our code more efficient and avoid creating multiple data subsets.
+
+-   The following code demonstrates how to use the pipe operator to mutate, remove a column, and rename variables in the dataset, applying all these changes efficiently in a single pipeline:
+
+-   In this code:
+
+-   `mutate(new_column = some_transformation(existing_column))`: Adds a new column by transforming an existing one.
+
+-   `select(-unwanted_column)`: Removes the specified column.
+
+-   `rename(new_name1 = old_name1, new_name2 = old_name2)`: Renames specified columns.
+
+-   Using the pipe operator (%\>%), all these operations are performed sequentially and the resulting dataset is assigned back to hsb2.
+
+```{r}
+highschool <- read_csv("/Users/pp16/Desktop/NTU/UCL exchange/week 1 day 3/hsb2.csv") %>% 
+  mutate(race = factor(race, levels = c(1,2,3,4),
+                             labels = c("hispanic", 
+                                        "asian", 
+                                        "african-american", 
+                                        "white")),
+         ses = factor(ses, levels = c(1,2,3),
+                           labels = c("low", 
+                                      "middle", 
+                                      "high")),
+         schtyp = factor(schtyp, levels = c(1,2),
+                           labels = c("public", 
+                                      "private")),
+         gender = factor(female, levels = c(0,1),
+                           labels = c("male", 
+                                      "female"))) %>% 
+  select(-female) %>% 
+  rename( socioeconomic_group = ses, 
+          racial_group = race, 
+          school_type = schtyp)
+
+highschool
+```
+
+-   write a code to provides a score_summary for females who are from public schools using the pipe operator to filter, summarize, and format the data:
+
+## Your turn!
+
+-   write a code to provides a score_summary for females who are from public schools using the pipe operator to filter, summarize, and format the data:
+
+-   You may use the following commands:
+
+-   Filtering [[[[[[Data:\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\`filter(gender](Data:\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\%60filter(gender){.uri}]([Data:\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\%60filter(gender)](Data:\\\\\\\\\\\\\\\%60filter(gender)){.uri}{.uri}]([Data:\\\\\\\\\\\\\\%60filter(gender)](Data:\\\%60filter(gender)){.uri}{.uri}]([Data:\\\\\\%60filter(gender)](Data:%60filter(gender)){.uri}{.uri}]([Data:\\%60filter(gender)](Data:%60filter(gender)){.uri}{.uri}]([Data:%60filter(gender)](Data:%60filter(gender)){.uri}{.uri} == "female", school_type == "public")\`: Selects rows where the gender column is "female" and the school_type column is "public".
+
+-   `select(read:socst)`: Selects columns from read to socst. These columns typically represent different subjects such as reading, math, science, and social studies.
+
+-   `summarise_all(mean)`: Computes the mean (average) for each selected column. This operation calculates the average score for each subject across all female students in public schools.
+
+-   After executing this code, `score_summary` will contain a single row of data with the average scores for reading, math, science, and social studies among female students attending public high schools.
+
+```{r}
+
+score_summary = highschool %>%
+  filter(gender=="female", school_type=="public") %>%
+  select(read:socst)%>%
+  summarise_all(mean)
+
+score_summary
+
+```
+
+### Missing data
+
+```{r}
+highschool_missing <- read_csv("/Users/pp16/Desktop/NTU/UCL exchange/week 1 day 4/hsb2_missing_data.csv") %>% 
+  mutate(race = factor(race, levels = c(1,2,3,4),
+                             labels = c("hispanic", 
+                                        "asian", 
+                                        "african-american", 
+                                        "white")),
+         ses = factor(ses, levels = c(1,2,3),
+                           labels = c("low", 
+                                      "middle", 
+                                      "high")),
+         schtyp = factor(schtyp, levels = c(1,2),
+                           labels = c("public", 
+                                      "private")),
+         gender = factor(female, levels = c(0,1),
+                           labels = c("male", 
+                                      "female"))) %>% 
+  select(-female) %>% 
+  rename( socioeconomic_group = ses, 
+          racial_group = race, 
+          school_type = schtyp)
+
+summary(highschool_missing)
+```
+
+```{r}
+score_missing = highschool_missing %>%
+  drop_na() %>%
+  filter(gender=="female", school_type=="public") %>%
+  select(read:socst)%>%
+  summarise_all(mean)
+  
+score_missing
+```
+
+```{r}
+mean(highschool_missing$math, na.rm=T)
+```
+
+# See number of complete cases
+
+```{r}
+sum(complete.cases(highschool_missing))
+```

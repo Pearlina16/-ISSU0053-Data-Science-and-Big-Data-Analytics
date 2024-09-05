@@ -1,0 +1,231 @@
+---
+title: "Summary Statistics and Plots"
+output:
+  html_document:
+    df_print: paged
+---
+
+In this notebook we will load in the Palmer penguins dataset, and your task is to show how R can be used for summary statistics and plots, so that we can understand the key features of the dataset, and the differences between penguin species.
+
+In order to install the package containing the data file you will need to run `install.packages("palmerpenguins")` in the R console window. (We do not include the install command in the Notebook because we only run it once, not everytime we run the Notebook).
+
+```{r}
+library("tidyverse")
+library("palmerpenguins")
+```
+
+In groups work to add example code (and any appropriate comments on when a statistic/plot is a good/bad choice) for each of the headings below.
+
+## Summary Statistics
+
+```{r}
+summary(penguins)
+```
+
+### Measures of central tendancy
+
+```{r}
+head(penguins)
+```
+
+**mean**
+
+```{r}
+penguins %>%
+  select(bill_length_mm:body_mass_g) %>%
+  drop_na()%>%
+  summarise_all(mean)
+```
+
+**median**
+
+```{r}
+penguins %>%
+  select(bill_length_mm:body_mass_g) %>%
+  drop_na()%>%
+  summarise_all(median)
+```
+
+### Measures of dispersion
+
+**standard deviation**
+
+```{r}
+penguins %>%
+  select(bill_length_mm:body_mass_g) %>%
+  drop_na()%>%
+  summarise_all(sd)
+```
+
+**variance**
+
+```{r}
+penguins %>%
+  select(bill_length_mm:body_mass_g) %>%
+  drop_na()%>%
+  summarise_all(var)
+```
+
+**range**
+
+```{r}
+penguins %>%
+  select(bill_length_mm:body_mass_g) %>%
+  drop_na()%>%
+  summarise_all(range)
+```
+
+**inter-quartile range**
+
+```{r}
+penguins %>%
+  select(bill_length_mm:body_mass_g) %>%
+  drop_na()%>%
+  summarise_all(IQR)
+```
+
+## Visualising Data
+
+### Visualising categorical data
+
+**barcharts**
+
+```{r}
+ggplot(penguins, aes(x=species)) +
+  geom_bar() +
+  labs(title = "Count of Penguins by Species")
+```
+
+**frequency table**
+
+```{r}
+table(penguins$species, penguins$island, penguins$sex)
+```
+
+### Visualising distributions
+
+**histograms**
+
+```{r}
+ggplot() +
+  geom_histogram(data=filter(penguins),
+                 mapping = aes(x=bill_length_mm),
+                 binwidth = 5)
+```
+
+**density plots**
+
+```{r}
+ggplot(data = penguins %>% drop_na(sex, bill_depth_mm)) +
+  geom_density(mapping=aes(x=bill_depth_mm, color=sex))
+```
+
+## Comparisons
+
+### two continuous variables
+
+**scatter plot**
+
+```{r}
+ggplot(data=penguins %>% drop_na(sex, bill_length_mm, bill_depth_mm), mapping = aes(x=bill_depth_mm, y = bill_length_mm, color=sex)) +
+  geom_point(size=0.1, alpha=0.8) 
+
+ggplot(data=penguins, mapping = aes(x=bill_depth_mm, y = bill_length_mm, color=species)) +
+  geom_point(size=0.1, alpha=0.8) 
+```
+
+**scatter plot with smooth trendline**
+
+```{r}
+ggplot(data=penguins, mapping = aes(x=bill_depth_mm, y = bill_length_mm, color=species)) +
+  geom_point(size=0.1, alpha=0.8) +
+  geom_smooth()
+```
+
+**scatter plot with straight line fit**
+
+```{r}
+ggplot(data=penguins, mapping = aes(x=bill_depth_mm, y = bill_length_mm, color=species)) +
+  geom_point(size=0.1, alpha=0.8) +
+  geom_smooth(method="lm")
+
+```
+
+**2D density plots**
+
+```{r}
+ggplot(data=penguins,mapping=aes(x=bill_depth_mm, y=bill_length_mm)) +
+  geom_density2d()
+```
+
+**pairs plot**
+
+```{r}
+pairs(penguins %>% select(bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g), col = penguins$species)
+
+```
+
+**correlation**
+```{r}
+penguins %>%
+  ggcorr(label=TRUE)
+```
+
+
+```{r}
+cor(penguins %>% select(bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g) %>% drop_na())
+
+```
+
+### continuous vs categorical variables
+
+**histograms**
+```{r}
+penguins %>%
+  drop_na(bill_length_mm) %>%
+  ggplot(aes(bill_length_mm)) +
+  geom_histogram() +
+  facet_grid(cols=vars(species))
+```
+
+```{r}
+ggplot(data = penguins, mapping = aes(x=bill_depth_mm, y=species)) +
+  geom_histogram()
+```
+
+**density plots**
+```{r}
+penguins %>%
+  drop_na(bill_length_mm) %>%
+  ggplot(aes( x=bill_length_mm, fill=species) )+
+  geom_density(alpha=0.2, position="identity") 
+```
+
+**violin plots**
+```{r}
+penguins %>%
+  drop_na(bill_length_mm) %>%
+  ggplot(aes(y=bill_length_mm, x=species)) +
+  geom_violin()
+```
+
+**box plots**
+
+```{r}
+penguins %>%
+  drop_na(bill_length_mm) %>%
+  ggplot(aes(y=bill_length_mm,x=species)) +
+  geom_boxplot()
+
+```
+
+### two categorical variables
+
+**frequency table**
+
+```{r}
+penguins %>%
+  count(species,island) %>%
+  pivot_wider(names_from=species,values_from=n,values_fill=0)
+```
+
