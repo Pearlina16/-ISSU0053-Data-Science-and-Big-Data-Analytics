@@ -1,0 +1,148 @@
+---
+title: "Regularization"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*.
+
+To minimize RSS, find model with highest R\^2
+
+## Regularization
+
+-   we wan to penalised model complexity
+
+```{r}
+#install.packages("glmnet")
+library(glmnet)
+library(tidyverse)
+```
+
+```{r}
+wine <- read_csv("/Users/pp16/Desktop/NTU/UCL exchange/week 2 day 11/wine.csv")
+```
+
+```{r}
+names(wine)[1] <- "f_acidity"
+names(wine)[2] <- "v_acidity"
+names(wine)[3] <- "citric_acid"
+names(wine)[6] <- "free_so2"
+names(wine)[7] <- "total_so2"
+names(wine)[4] <- "res_sugar"
+
+glimpse(wine)
+```
+
+```{r}
+str(wine)
+```
+
+-   when landa is small, we are applying little weight on penalty, may result in overfitting
+-   when landa is large, we focus almost entirely on penalty, penalty is based on size of coefficicient, the coefficients are shrunk, coefficients are driven towards zero, making it more simple models
+
+```{r}
+wine_x <- select(wine, -quality)
+wine_y <- wine$quality
+
+fit_lasso <- glmnet(x=data.matrix(wine_x),
+                    y=wine_y,
+                    alpha = 1)
+plot(fit_lasso, xvar="lambda")
+```
+
+-   As log lambda increases, the penalty on the coefficients increases, forcing more coeffecients to shrunk to zero
+
+-   The number of coefficients decreases from 11 to 1
+
+See how, as (the logarithm of) landa increases, coefficient values are “shrunk” towards zero. The numbers along the top of the plot indicate how many non-zero coefficients there are in the model, reducing from the full set of 11 available coefficients at the smallest values of landa to only a single coefficient at the largest values of landa.
+
+```{r}
+set.seed(1)
+results_lasso <- cv.glmnet(x=data.matrix(wine_x),
+                           y=wine_y,
+                           alpha=1,
+                           nfolds=10)
+plot(results_lasso)
+```
+
+-   at 8 coefficients seems the lowest mean square error
+-   but we choose the simplest model which is the one at around 4 coefficients that lies in the same range
+
+```{r}
+opt_fit_lasso <- glmnet(x=data.matrix(wine_x),
+                        y=wine_y,
+                        alpha = 1,
+                        lambda = results_lasso$lambda.1se)
+coef(opt_fit_lasso)
+
+```
+
+-   dots represent coefficient estimate of 0
+-   total 5 covariance (non-zero) ==\> sparse model (not filling in all the valyes, js saying most are non 0)
+
+```{r}
+library(cvTools)
+cv_opt_lasso <- cvFit(opt_fit_lasso,
+                      data = data.matrix(wine_x),
+                      y = wine_y,
+                      k=5,
+                      R=30 )
+cv_opt_lasso$cv
+```
+
+## Ridge regression
+
+-   error is not absolute, but square of sum of error (sum of positive)
+-   squaring penalise smaller values
+-   even greater penalty
+
+```{r}
+fit_ridge <- glmnet(x=data.matrix(wine_x),
+                    y=wine_y,
+                    alpha = 0)
+plot(fit_ridge, xvar="lambda")
+```
+
+```{r}
+set.seed(1)
+results_ridge <- cv.glmnet(x=data.matrix(wine_x),
+                           y=wine_y,
+                           alpha=0,
+                           nfolds=10)
+plot(results_ridge)
+```
+
+```{r}
+opt_fit_ridge <- glmnet(x=data.matrix(wine_x),
+                        y=wine_y,
+                        alpha = 0,
+                        lambda = results_ridge$lambda.1se)
+coef(opt_fit_ridge)
+
+```
+
+```{r}
+cv_opt_ridge <- cvFit(opt_fit_ridge,
+                      data = data.matrix(wine_x),
+                      y = wine_y,
+                      k=5,
+                      R=30 )
+cv_opt_ridge$cv
+```
+
+## Covariate standardisation
+
+It is a common pitfall of students new to statistics that the magnitude of coefficients in linear regression indicates the importance of their corresponding covariate.
+
+For example, consider the model:
+
+𝑦=0+1×𝑥1+10×𝑥2
+
+One might assume that 𝑥2 is ten times as important as 𝑥1 – changing 𝑥2 by one unit has ten times the impact on 𝑦 as changing 𝑥1 by one unit.
+
+The missing piece from that argument is that the scales of 𝑥1 and 𝑥2 may vary. If 𝑥1 varies between 0 and 100 and 𝑥2 varies between 0 and 0.01, it is likely that 𝑥1 will have a considerably greater impact on 𝑦 (through 1×𝑥1) than 𝑥2 will have on 𝑦 (through 10×𝑥2).
+
+Ridge regression and the lasso combine coefficient estimates in the penalty term without any scaling, reducing the size of coefficients for covariates determined to be less important. It is therefore imperative that the coefficients are on the same scale, ensured by *standardising* the covariates: 𝑥′= (𝑥−𝑚𝑒𝑎𝑛(𝑥))/𝑠𝑑(𝑥)
+
+If we were to implement ridge regression or the lasso manually then we would need to carry out that standardisation. As it is, the implementation in R above standarises the covariates, performs the model fit, then reverses the standardisation process without requiring us to do anything ourselves.

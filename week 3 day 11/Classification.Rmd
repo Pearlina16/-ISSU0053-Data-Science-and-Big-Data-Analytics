@@ -1,0 +1,297 @@
+---
+title: "Classification"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*.
+
+## Classification
+
+This is an example of the general result for conditional probabilities:
+
+P (A \| B) = P(A and B) / P(B)
+
+The methodology for moving from 𝑃(𝐴\|𝐵) to 𝑃(𝐵\|𝐴) is known as *Bayes’ theorem:*
+
+𝑃(𝐵\|𝐴) = 𝑃(𝐴\|𝐵)×𝑃(𝐵) / 𝑃(𝐴)
+
+Bayes’ theorem is the foundation of the major statistical subfield of Bayesian statistics.
+
+## Linear regression
+
+A standard linear regression model takes the form:𝑌=𝛽0+𝛽1𝑋+𝜖
+
+Where 𝜖 is independent of 𝑋 and 𝑚𝑒𝑎𝑛(𝜖)=0 if the assumptions underlying linear regression are satisfied.
+
+Taking the expectation of 𝑌 conditional on a specific value of 𝑋 in the above expression gives:𝐸[𝑌\|𝑋=𝑥]=𝐸[𝛽0+𝛽1𝑋+𝜖\|𝑋=𝑥]=𝐸[𝛽0\|𝑋=𝑥]+𝐸[𝛽1𝑋\|𝑋=𝑥]+𝐸[𝜖\|𝑋=𝑥]=𝛽0+𝛽1𝑥Where we have made use of the fact that the expectation is a linear operator.
+
+## **Expectation in the case of a binary outcome**
+
+For a discrete random variable 𝑌, we have that:𝐸[𝑌]=∑𝑦𝑦×𝑃(𝑌=𝑦)
+
+In the case of a binary random variable, taking the values 0 and 1, we have that:𝐸[𝑌]=∑𝑦𝑦×𝑃(𝑌=𝑦)=0×𝑃(𝑌=0)+1×𝑃(𝑌=1)=𝑃(𝑌=1)
+
+eg. 0 male 1 female
+
+## **Linear regression for classification into two categories**
+
+Combining the two previous results, we may fit a linear regression model to an outcome 𝑌 and interpret the predictions provided by this model as conditional estimates of the outcome, 𝑃(𝑌=1\|𝑋=𝑥).
+
+𝐸[𝑌\|𝑋=𝑥]=𝑃(𝑌=1\|𝑋=𝑥)=𝛽0+𝛽1𝑥
+
+From this, we can interpret 𝛽0+𝛽1𝑥 as 𝑃(𝑌=1\|𝑋=𝑥). This result can be the basis of a classification procedure. If 𝑃(𝑌=1\|𝑋=𝑥) is large, we would classify observation 𝑥 in the category corresponding to 𝑌=1, and vice versa.
+
+## **Application**
+
+The `mf_training.Rda` and `mf_test.Rda` files are R data files, which can be read directly into the working environment.
+
+```{r}
+library(tidyverse)
+load("/Users/pp16/Desktop/NTU/UCL exchange/week 2 day 11/mf_training.Rda")
+head(mf_training)
+
+```
+
+-   0/1 classification is important for our discussion to hold
+
+```{r}
+model_1 <- lm(gender ~ height, data=mf_training)
+
+height_grid <- tibble(height=seq(140,200,length.out=100))
+height_grid$gender <- predict(model_1, newdata=height_grid)
+ggplot(mapping=aes(y=gender, x=height)) +
+  geom_point(data=mf_training) +
+  geom_line(data=height_grid)
+```
+
+-   we divide at 171: \>171: male, \<171: female
+
+-   will have wrongly classified male and females
+
+-   no line we can draw that perfectly distinguish
+
+```{r}
+summary(model_1)
+```
+
+We can view a summary of the model, to see that the estimated coefficients are 𝛽\^0=4.90 and 𝛽\^1=−0.03.
+
+```{r}
+db <- (0.5-model_1$coefficients[[1]])/model_1$coefficients[[2]]
+db
+```
+
+Thus, if an individual has a height less than 171cm we might classify them as female, with individuals with a height greater than 171cm classified as male.
+
+We can check the accuracy of our predictor.
+
+```{r}
+mf_training$pred <- predict(model_1)
+mf_training$pred_gender <- if_else(mf_training$pred < 0.5, 0, 1)
+
+table(predicted=mf_training$pred_gender,actual=mf_training$gender)
+```
+
+-   180 actual male were predicted to be male
+
+-   521 actual female were correctly predicted to be female
+
+-   diagonal is correctly labelled
+
+```{r}
+sum(mf_training$pred_gender!=mf_training$gender)/nrow(mf_training)
+```
+
+-   accuracy of our model
+
+As with other approaches, a validation set approach may be more appropriate to quantify the accuracy of predictions in this case. We can therefore use the model built with the training data to make predictions for the test data and quantify the resulting accuracy.
+
+```{r}
+load("/Users/pp16/Desktop/NTU/UCL exchange/week 3 day 11/mf_test.Rda")
+nrow(mf_test)
+
+mf_test$pred <- predict(model_1, newdata=mf_test)
+mf_test$pred_gender <- if_else(mf_test$pred < 0.5, 0, 1)
+
+table(predicted=mf_test$pred_gender,actual=mf_test$gender)
+```
+
+```{r}
+sum(mf_test$pred_gender!=mf_test$gender)/nrow(mf_test)
+```
+
+-   increase in error to 36%
+
+# **Logistic regression**
+
+An alternative might be to relate a function of 𝑃(𝑌=1\|𝑋=𝑥), 𝑔(𝑃(𝑌=1\|𝑋=𝑥)) say, to the linear predictor 𝛽0+𝛽1𝑥. This is the foundation of the broader class of generalised linear models. Under this framework, 𝑔() is referred to as the link function.
+
+Logistic regression is one example of a generalised linear model which suits our requirements here. The link function is the logit function:𝑔(𝜇)=log⁡(𝜇1−𝜇)The logit function takes values in [0,1] and transforms them to the range (−∞,∞).
+
+Our logistic regression model is therefore of the form:log⁡(𝑃(𝑌=1\|𝑋=𝑥)1−𝑃(𝑌=1\|𝑋=𝑥))=𝛽0+𝛽1𝑥The left hand side of this expression is commonly referred to as the log odds.
+
+```{r}
+mf_training %>%
+  mutate(gender=factor(gender, labels=c("M","F"))) %>%
+  ggplot() +
+  geom_density(mapping=aes(x=height, color=gender))
+```
+
+-   bionomial: log odds (probability)
+
+```{r}
+model_logreg <- glm(gender ~ height,
+                    data=mf_training,
+                    family=binomial)
+
+summary(model_logreg)
+```
+
+The R output indicates:log⁡(𝑃(𝑌=1\|𝑋=𝑥)1−𝑃(𝑌=1\|𝑋=𝑥))=21.1−0.1𝑥
+
+We often want to use a logistic regression model to make predictions for 𝑃(𝑌=1\|𝑋=𝑥), for which we can rearrange the general model expression.log⁡(𝑃(𝑌=1\|𝑋=𝑥)1−𝑃(𝑌=1\|𝑋=𝑥))=𝛽0+𝛽1𝑥⇒𝑃(𝑌=1\|𝑋=𝑥)=11+exp⁡(−(𝛽0+𝛽1𝑥))The expression on the right hand side is the logistic function, the inverse of the logit function, which is how logistic regression gets its name.
+
+```{r}
+mf_fit <- tibble(height=seq(140,200,length.out=100))
+
+mf_fit$gender <- predict(model_logreg,
+                         newdata=mf_fit,
+                         type="resp")
+
+ggplot(mapping=aes(y=gender, x=height)) +
+  geom_point(data=mf_training) +
+  geom_line(data=mf_fit)
+```
+
+log⁡(𝑃(𝑌=1\|𝑋=𝑥)1−𝑃(𝑌=1\|𝑋=𝑥))=𝛽0+𝛽1𝑥𝑃(𝑌=1\|𝑋=𝑥)=0.5⇒0=𝛽0+𝛽1𝑥⇒
+
+𝑥=−𝛽0/𝛽1
+
+```{r}
+	
+  db
+db_logreg <- (-model_logreg$coefficients[[1]])/model_logreg$coefficients[[2]]
+db_logreg
+```
+
+```{r}
+mf_training$pred <- predict(model_logreg,type="resp")
+mf_training$pred_gender <- if_else(mf_training$pred < 0.5, 0, 1)
+
+table(predicted=mf_training$pred_gender,actual=mf_training$gender)
+
+```
+
+```{r}
+sum(mf_training$pred_gender!=mf_training$gender)/nrow(mf_training)
+
+```
+
+-   ?predict.glm
+
+-   resp: type =\> response variable (0/1) probability
+
+```{r}
+mf_test$pred <- predict(model_logreg,type="resp",newdata=mf_test)
+mf_test$pred_gender <- if_else(mf_test$pred < 0.5, 0, 1)
+
+table(predicted=mf_test$pred_gender,actual=mf_test$gender)
+
+```
+
+# **Classification in the case of more than two outcome categories**
+
+```{r}
+data(iris)
+
+ggplot(data=iris, mapping=aes(x=Petal.Length,
+                              y=Petal.Width,
+                              color=Species)) +
+  geom_point()
+
+```
+
+```{r}
+iris_simple <- iris %>%
+  filter(Species == "virginica" | Species=="versicolor") %>%
+  select(Species, Sepal.Length, Sepal.Width) %>%
+  mutate(is_versicolor = if_else(Species == "versicolor", 1, 0),
+         Species = droplevels(Species))
+
+# note the drop levels command updates the factor levels
+# to reflect it only contains entries for 2 Species
+
+head(iris_simple)
+```
+
+```{r}
+logistic.model <- glm( is_versicolor ~ Sepal.Length + Sepal.Width,
+                    data=iris_simple,family=binomial)
+
+logistic.model.prediction <- if_else( predict(logistic.model,type='resp') > 0.5,
+                                      'versicolor',
+                                      'virginica')
+
+table(predicted=logistic.model.prediction,actual=iris_simple$Species)
+
+```
+
+```{r}
+correct <- sum(logistic.model.prediction == iris_simple$Species)
+correct
+```
+
+```{r}
+incorrect <- sum(logistic.model.prediction != iris_simple$Species)
+incorrect
+```
+
+```{r}
+library(MASS)
+select <- dplyr::select
+
+lda.model <- lda(Species ~ Sepal.Length+Sepal.Width, data = iris_simple)
+
+lda.model.prediction <- predict(lda.model)$class
+table(predicted=lda.model.prediction,actual=iris_simple$Species)
+```
+
+```{r}
+table(LDA=lda.model.prediction,LR=logistic.model.prediction)
+```
+
+```{r}
+lda.model <- lda(Species ~ Sepal.Length+Sepal.Width, data = iris)
+
+lda.model.prediction <- predict(lda.model)$class
+
+table(predicted=lda.model.prediction,actual=iris$Species)
+```
+
+```{r}
+correct <- sum(lda.model.prediction == iris$Species)
+correct
+```
+
+```{r}
+incorrect <- sum(lda.model.prediction != iris$Species)
+incorrect
+```
+
+```{r}
+qda.model <- qda(Species ~ Sepal.Length+Sepal.Width, data = iris)
+
+qda.model.prediction <- predict(qda.model)$class
+
+table(predicted=qda.model.prediction,actual=iris$Species)
+
+```
+
+```{r}
+correct = sum(qda.model.prediction == iris$Species)
+correct
+incorrect = sum(qda.model.prediction != iris$Species)
+incorrect
+```

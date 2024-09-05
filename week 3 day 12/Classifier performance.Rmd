@@ -1,0 +1,91 @@
+---
+title: "Classifier performance"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*.
+
+# **Quantifying classifier accuracy**
+
+There exist a large number of ways in which the accuracy of the classifier may be quantified. We will introduce some of these in the following subsections.
+
+## **Misclassification rate**
+
+|             | Obs. F | Obs F’ |
+|-------------|--------|--------|
+| **Pred. F** | 406    | 270    |
+| **Pred F’** | 96     | 228    |
+
+The misclassification rate is the proportion of all observations which are not correctly classified.
+
+The misclassification rate for the above example is:
+
+(270+96)/(406+270+96+228)=366/1000=0.366
+
+## **False positive rate** 
+
+(bigger than 0.5 not desirable)
+
+|             | Obs. F | Obs F’ |
+|-------------|--------|--------|
+| **Pred. F** | 406    | 270    |
+| **Pred F’** | 96     | 228    |
+
+The false positive rate is the proportion of all negative examples (F’) which are classified as positive (F).
+
+The false positive rate for the above example is:270/(270+228)=270/498=0.542
+
+False positives then count the fraction of healthy individuals who unnecessarily undergo treatment.
+
+aim to minimise the false positive rate then it is trivial to drive this value to zero
+
+## **True negative rate/Specificity**
+
+|             | Obs. F | Obs F’ |
+|-------------|--------|--------|
+| **Pred. F** | 406    | 270    |
+| **Pred F’** | 96     | 228    |
+
+The true negative rate is the proportion of all negative examples (F’) which are classified as negative (F’)
+
+The true negative rate for the above example is:228/(228+270)=228/498=0.458
+
+The true negative rate is simply one minus the false positive rate.
+
+## **False negative rate**
+
+|             | Obs. F | Obs F’ |
+|-------------|--------|--------|
+| **Pred. F** | 406    | 270    |
+| **Pred F’** | 96     | 228    |
+
+The false negative rate is the proportion of all positive examples (F) which are classified as negative (F’).
+
+The false negative rate for the above example is:96/ (96+406) =96/502=0.191
+
+## **True positive rate/Sensitivity**
+
+|             | Obs. F | Obs F’ |
+|-------------|--------|--------|
+| **Pred. F** | 406    | 270    |
+| **Pred F’** | 96     | 228    |
+
+The true positive rate is the proportion of all positive examples (F) which are classified as positive (F).
+
+The true positive rate for the above example is:406/ (406+96) =406/ 502=0.809
+
+The true positive rate is simply one minus the false negative rate.
+
+## Tuning a classifier
+
+We might instead draw the decision boundary at 𝑃(𝑌=1|𝑋=𝑥)=𝑝 and vary 𝑝 over the range from 0 to 1
+
+When 𝑝=0 we classify all observations as being positive. The true positive rate would then be 1. All positive cases are classified as being positive, because all cases are classified as being positive. The false positive rate would also be 1. All negative cases are classified as being positive, because all cases are classified as being positive.
+
+When 𝑝=1 we classify all observations as being negative. The true positive rate would then be 0. No positive cases are classified as being positive, because all cases are classified as being negative. The false positive rate would also be 0. No negative cases are classified as being positive, because all cases are classified as being negative.
+
+```{r}
+plot(cars)
+```
