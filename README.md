@@ -32,65 +32,65 @@ The coursework is conducted in R, utilizing the following libraries:
 
 1. Introduction
 
-Brief explanation of the coursework and objectives.
+    Brief explanation of the coursework and objectives.
 
 2. Data Loading and Cleaning
 
-Reading the dataset and converting categorical variables to factors.
+    Reading the dataset and converting categorical variables to factors.
 
-Identifying and handling missing values.
+    Identifying and handling missing values.
 
-Removing outliers to improve statistical reliability.
+    Removing outliers to improve statistical reliability.
 
 3. Exploratory Data Analysis
 
-Checking correlations between key variables.
+    Checking correlations between key variables.
 
-Visualizing relationships through scatter plots and regression lines.
+    Visualizing relationships through scatter plots and regression lines.
 
-Investigating the relationships between demographic indicators and socioeconomic factors.
+    Investigating the relationships between demographic indicators and socioeconomic factors.
 
 4. Regression Analysis
 
-4.1 Simple Linear Regression
-
-Building simple regression models to study the relationship between Median House Price (Median_HP) and variables such as obesity and unemployment.
-
-Using logarithmic transformations for better model fit.
-
-4.2 Multivariate Regression
-
-Incorporating multiple predictors to improve model performance.
-
-Evaluating models using Adjusted R-squared and AIC.
-
-4.3 Non-linear Regression
-
-Implementing polynomial regression to capture non-linear relationships.
-
-Utilizing cubic and higher-order polynomial terms.
-
-4.4 Spline Regression
-
-Applying spline models to reduce overfitting while maintaining flexibility in capturing non-linear relationships.
-
-4.5 Stepwise Regression and Exhaustive Search
-
-Using stepwise selection (AIC-based) and exhaustive search methods to determine the best combination of variables.
+  4.1 Simple Linear Regression
+  
+      Building simple regression models to study the relationship between Median House Price (Median_HP) and variables such as obesity and unemployment.
+      
+      Using logarithmic transformations for better model fit.
+  
+  4.2 Multivariate Regression
+  
+      Incorporating multiple predictors to improve model performance.
+      
+      Evaluating models using Adjusted R-squared and AIC.
+  
+  4.3 Non-linear Regression
+  
+      Implementing polynomial regression to capture non-linear relationships.
+      
+      Utilizing cubic and higher-order polynomial terms.
+  
+  4.4 Spline Regression
+  
+      Applying spline models to reduce overfitting while maintaining flexibility in capturing non-linear relationships.
+  
+  4.5 Stepwise Regression and Exhaustive Search
+  
+      Using stepwise selection (AIC-based) and exhaustive search methods to determine the best combination of variables.
 
 5. Regularization Methods
 
-5.1 Lasso Regression
-
-Implementing Lasso regression to shrink coefficients and perform variable selection.
-
-Identifying optimal lambda values through cross-validation.
-
-5.2 Ridge Regression
-
-Using Ridge regression to reduce model complexity without eliminating variables.
-
-Comparing Ridge and Lasso results.
+    5.1 Lasso Regression
+    
+        Implementing Lasso regression to shrink coefficients and perform variable selection.
+        
+        Identifying optimal lambda values through cross-validation.
+    
+    5.2 Ridge Regression
+    
+        Using Ridge regression to reduce model complexity without eliminating variables.
+        
+        Comparing Ridge and Lasso results.
 
 6. Model Comparison
 
